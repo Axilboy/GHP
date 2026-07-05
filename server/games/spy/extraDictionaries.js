@@ -1,0 +1,75 @@
+function locations(items) {
+  return items.map(([id, name, roles]) => ({ id, name, roles }));
+}
+
+function dictionary(id, name, description, category, priceRub, cover, items) {
+  return { id, name, description, category, priceRub, cover, free: false, subjectType: 'location', countLabel: 'локаций', locations: locations(items) };
+}
+
+const commonRoles = ['Посетитель', 'Сотрудник', 'Охранник', 'Новичок', 'Организатор', 'Фотограф'];
+const more = (prefix, names) => names.map((name, index) => [`${prefix}_${index + 1}`, name, commonRoles]);
+
+export const CITY_SPY_DICTIONARY = dictionary('city', 'Городская жизнь', 'Современные места, знакомые каждому жителю города.', 'Город', 99, 'city', [
+  ['coworking', 'Коворкинг', ['Фрилансер', 'Администратор', 'Дизайнер', 'Курьер', 'Предприниматель', 'Уборщик']],
+  ['food_court', 'Фуд-корт', ['Гость', 'Кассир', 'Повар', 'Курьер', 'Охранник', 'Уборщик']],
+  ['fitness_club', 'Фитнес-клуб', ['Тренер', 'Посетитель', 'Администратор', 'Массажист', 'Уборщик', 'Диетолог']],
+  ['beauty_salon', 'Салон красоты', ['Клиент', 'Парикмахер', 'Администратор', 'Визажист', 'Курьер', 'Уборщик']],
+  ...more('city_more', ['Торговый центр', 'Бар на крыше', 'Автомойка', 'Пункт выдачи', 'Зоомагазин', 'Фотостудия', 'Бизнес-центр', 'Ночной клуб', 'Квест-комната', 'Стоматология']),
+]);
+
+export const TRAVEL_SPY_DICTIONARY = dictionary('travel', 'Путешествия', 'Отпуск, приключения и поездки по всему миру.', 'Путешествия', 149, 'travel', [
+  ...more('travel', ['Горнолыжный курорт', 'Лагерь в пустыне', 'Островной курорт', 'Хостел', 'Пограничный контроль', 'Экскурсионный автобус', 'Горный лагерь', 'Паром', 'Посольство', 'Рынок сувениров', 'Сафари', 'Маяк']),
+]);
+
+export const SECRET_SPY_DICTIONARY = dictionary('secret', 'Совершенно секретно', 'Лаборатории, штабы и опасные задания для опытных игроков.', 'Приключения', 149, 'secret', [
+  ...more('secret', ['Секретная лаборатория', 'Подземная база', 'Школа разведчиков', 'Правительственный бункер', 'Хранилище улик', 'Центр управления', 'Конспиративная квартира', 'Комната допросов', 'Киберцентр', 'Подводная база']),
+]);
+
+export const POP_SPY_DICTIONARY = dictionary('pop', 'Кино и поп-культура', 'Съёмки, премьеры, концерты и мир знаменитостей.', 'Развлечения', 129, 'pop', [
+  ...more('pop', ['Съёмочная площадка', 'Кинопремьера', 'Музыкальный фестиваль', 'Фестиваль комиксов', 'Реалити-шоу', 'Церемония награждения', 'Студия звукозаписи', 'Модный показ', 'Ток-шоу', 'Караоке-клуб']),
+]);
+
+export const FANTASY_SPY_DICTIONARY = dictionary('fantasy', 'Магия и легенды', 'Фэнтезийные места, где даже мирным нельзя доверять.', 'Фэнтези', 149, 'fantasy', [
+  ...more('fantasy', ['Школа магии', 'Пещера дракона', 'Королевский замок', 'Рынок ведьм', 'Зачарованный лес', 'Башня волшебника', 'Пиратский остров', 'Древний храм', 'Гильдия героев', 'Портал миров']),
+]);
+
+export const AFTER_DARK_SPY_DICTIONARY = dictionary('after_dark', '18+ После полуночи', 'Взрослые вечеринки, бары и места, где вопросы становятся смелее.', '18+', 179, 'after_dark', [
+  ...more('after_dark', ['Коктейльный бар', 'Караоке после полуночи', 'Закрытая вечеринка', 'Лаунж на крыше', 'Стендап-клуб', 'Ночной автобус', 'VIP-комната клуба', 'Афтепати у друзей', 'Барная стойка', 'Танцпол']),
+]);
+
+export const COUPLES_SPY_DICTIONARY = dictionary('couples', 'Для влюбленных', 'Романтичные и неловко-милые места для пар и двойных свиданий.', 'Романтика', 149, 'couples', [
+  ...more('couples', ['Кинотеатр для свиданий', 'Набережная вечером', 'Кафе с десертами', 'Парк аттракционов', 'СПА для двоих', 'Квартира на ужин', 'Фотосессия пары', 'Отель на выходные', 'Каток зимой', 'Пикник на закате']),
+]);
+
+export const DRINKS_SPY_DICTIONARY = dictionary('drinks', 'Пьянка и бар', 'Тосты, настолки, караоке и ситуации, которые начинаются со слов «ещё по одной?».', 'Вечеринка', 149, 'drinks', [
+  ...more('drinks', ['Домашняя кухня с тостами', 'Паб у метро', 'Барная викторина', 'Караоке-комната', 'Дача с мангалом', 'Пивной фестиваль', 'Кухня на вечеринке', 'Бильярдная', 'Кальянная', 'Такси после тусовки']),
+]);
+
+export const OFFICE_PARTY_SPY_DICTIONARY = dictionary('office_party', 'Корпоратив', 'Офисные праздники, тимбилдинги и рабочие места, где все слишком хорошо друг друга знают.', 'Работа', 129, 'office_party', [
+  ...more('office_party', ['Переговорка', 'Офисная кухня', 'Новогодний корпоратив', 'Тимбилдинг на природе', 'Коворкинг команды', 'Планерка в понедельник', 'Презентация проекта', 'Офисный лифт', 'HR-собеседование', 'Командировка']),
+]);
+
+export const MEMES_SPY_DICTIONARY = dictionary('memes', 'Мемы и интернет', 'Стримы, чаты, тренды и места, где все говорят полунамёками.', 'Интернет', 129, 'memes', [
+  ...more('memes', ['Стримерская комната', 'Групповой чат', 'Мемный паблик', 'Киберспорт-арена', 'Подкаст-студия', 'Онлайн-курс', 'Дискорд-сервер', 'Видеосозвон', 'Комната блогера', 'Фестиваль гиков']),
+]);
+
+export const EXTRA_SPY_DICTIONARIES = [
+  CITY_SPY_DICTIONARY,
+  TRAVEL_SPY_DICTIONARY,
+  SECRET_SPY_DICTIONARY,
+  POP_SPY_DICTIONARY,
+  FANTASY_SPY_DICTIONARY,
+  AFTER_DARK_SPY_DICTIONARY,
+  COUPLES_SPY_DICTIONARY,
+  DRINKS_SPY_DICTIONARY,
+  OFFICE_PARTY_SPY_DICTIONARY,
+  MEMES_SPY_DICTIONARY,
+];
+
+export const SPY_BUNDLES = [
+  { id: 'starter', name: 'Стартовый пак', description: 'Городская жизнь и Путешествия.', dictionaryIds: ['city', 'travel'], priceRub: 199, oldPriceRub: 248, cover: 'travel' },
+  { id: 'adventure', name: 'Пак приключений', description: 'Совершенно секретно и Магия и легенды.', dictionaryIds: ['secret', 'fantasy'], priceRub: 249, oldPriceRub: 298, cover: 'fantasy' },
+  { id: 'party_pack', name: 'Пак для вечеринки', description: '18+, Для влюбленных и Пьянка и бар для взрослых компаний.', dictionaryIds: ['after_dark', 'couples', 'drinks'], priceRub: 349, oldPriceRub: 477, cover: 'drinks' },
+  { id: 'items_pack', name: 'Предметы Шпиона', description: 'Гаджеты, романтика, 18+ намёки, странные вещи, алкоголь и компьютерные игры.', dictionaryIds: ['items_gadgets', 'items_couples', 'items_after_dark', 'items_weird', 'items_alcohol', 'items_computer_games'], priceRub: 499, oldPriceRub: 914, cover: 'items_computer_games' },
+  { id: 'all_spy', name: 'Архив Шпиона 2026', description: 'Большой набор материалов Шпиона из текущего каталога. Состав указан в карточке и не включает будущие выпуски.', dictionaryIds: [...EXTRA_SPY_DICTIONARIES.map((item) => item.id), 'items_gadgets', 'items_couples', 'items_after_dark', 'items_weird', 'items_alcohol', 'items_computer_games'], priceRub: 1099, oldPriceRub: 2344, cover: 'base' },
+];

@@ -1,0 +1,13 @@
+node_modules
+dist
+artifacts
+.env
+.npm-cache
+.deploy-keys
+$Recycle.Bin
+$SysReset
+$Windows.~WS
+tmp_*
+*.log
+AI/
+outputs/

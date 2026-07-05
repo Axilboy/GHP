@@ -1,0 +1,41 @@
+services:
+  gamehubparty:
+    build: .
+    container_name: gamehubparty
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://127.0.0.1:63790
+      ROOM_TTL_MS: "21600000"
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      FEEDBACK_TO: ${FEEDBACK_TO:-support@gamehubparty.ru}
+      FEEDBACK_FROM: ${FEEDBACK_FROM:-support@gamehubparty.ru}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://gamehubparty.ru}
+      YOOKASSA_SHOP_ID: ${YOOKASSA_SHOP_ID:-}
+      YOOKASSA_SECRET_KEY: ${YOOKASSA_SECRET_KEY:-}
+      YOOKASSA_VAT_CODE: ${YOOKASSA_VAT_CODE:-1}
+    depends_on:
+      redis:
+        condition: service_healthy
+  redis:
+    image: redis:7-alpine
+    container_name: gamehubparty-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "127.0.0.1:63790:6379"
+    volumes:
+      - gamehubparty-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  gamehubparty-redis:

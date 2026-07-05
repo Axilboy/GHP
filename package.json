@@ -1,0 +1,36 @@
+{
+  "name": "gamehubparty",
+  "private": true,
+  "version": "0.3.26",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:web": "vite",
+    "dev:server": "node --watch server/index.js",
+    "device-lab": "node tools/device-lab/server.mjs",
+    "device-lab:test": "node tools/device-lab/server.mjs https://test.gamehubparty.ru",
+    "dev:lab": "concurrently \"npm:dev\" \"npm:device-lab\"",
+    "build": "vite build --configLoader runner",
+    "start": "node server/index.js",
+    "test": "node --test server/**/*.test.js tools/device-lab/*.test.js",
+    "test:all": "npm run test && npm run test:auto",
+    "test:auto": "npm run build && node tools/autotest/run.mjs",
+    "test:auto:test-server": "node tools/autotest/run.mjs --target=https://test.gamehubparty.ru"
+  },
+  "dependencies": {
+    "@vkontakte/vk-bridge": "^3.0.2",
+    "express": "^5.1.0",
+    "redis": "^5.8.0",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.2.1",
+    "http-proxy": "^1.18.1",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "socket.io-client": "^4.8.1",
+    "vite": "^6.0.5"
+  }
+}

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="shortcut icon" href="/favicon.svg" />
+  <title>GameHubParty - игры для компании</title>
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var isVk =
+        window.location.hostname === 'vk.gamehubparty.ru' ||
+        window.location.hostname.indexOf('vk.') === 0 ||
+        params.has('vk_app_id') ||
+        params.has('vk_user_id') ||
+        params.has('sign');
+
+      if (!isVk) return;
+
+      window.__GAMEHUBPARTY_VK_READY__ = true;
+
+      function sendInit() {
+        try {
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'vk-connect', handler: 'VKWebAppInit', params: {} }, '*');
+            window.parent.postMessage({ type: 'VKWebAppInit', handler: 'VKWebAppInit', params: {} }, '*');
+          }
+        } catch (error) {
+          window.__GAMEHUBPARTY_VK_INIT_ERROR__ = error && error.message ? error.message : String(error);
+        }
+      }
+
+      sendInit();
+      setTimeout(sendInit, 300);
+      setTimeout(sendInit, 1000);
+      setTimeout(sendInit, 2500);
+    })();
+  </script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+</html>

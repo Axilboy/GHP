@@ -1,0 +1,28 @@
+services:
+  gamehubparty-test:
+    build: .
+    container_name: gamehubparty-test
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3101:3100"
+    environment:
+      REDIS_URL: redis://redis-test:6379
+      ROOM_TTL_MS: "21600000"
+    depends_on:
+      redis-test:
+        condition: service_healthy
+  redis-test:
+    image: redis:7-alpine
+    container_name: gamehubparty-test-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - gamehubparty-test-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  gamehubparty-test-redis:
