@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const appSource = readFileSync('src/App.jsx', 'utf8');
-const serverSource = readFileSync('server/index.js', 'utf8');
+const serverSource = readFileSync('server/index.js', 'utf8')
+  + readFileSync('server/routes/admin.js', 'utf8')
+  + readFileSync('server/routes/feedback.js', 'utf8')
+  + readFileSync('server/routes/auth.js', 'utf8');
 const indexSource = readFileSync('index.html', 'utf8');
 const stylesSource = readFileSync('src/styles.css', 'utf8');
 
@@ -30,7 +33,7 @@ test('feedback form posts to support endpoint and server stores messages', () =>
   assert.match(appSource, /support@gamehubparty\.ru/);
   assert.match(appSource, /Тип обращения/);
   assert.match(appSource, /<select value=\{topic\}/);
-  assert.match(serverSource, /app\.post\('\/api\/feedback'/);
+  assert.match(serverSource, /post\('\/feedback'/);
   assert.match(serverSource, /feedback\.jsonl/);
   assert.match(serverSource, /sendFeedbackEmail/);
 });

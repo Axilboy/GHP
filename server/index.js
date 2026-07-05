@@ -1,8 +1,6 @@
 ﻿import { createServer } from 'node:http';
 import crypto from 'node:crypto';
 import path from 'node:path';
-import tls from 'node:tls';
-import { appendFile, mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { Server } from 'socket.io';
@@ -21,6 +19,22 @@ import {
   uniquePlayerName,
 } from './roomStore.js';
 import { connectRoomPersistence, loadRoomSnapshot, scheduleRoomSnapshot } from './roomPersistence.js';
+import { checkHttpRate, checkRate } from './lib/rateLimit.js';
+import { sendSystemEmail } from './lib/mailer.js';
+import { verifyVkLaunch } from './lib/vk.js';
+import { cleanAvatarDataUrl, cleanName, cleanPlayerId } from './lib/validators.js';
+import { persistProfiles, persistRooms } from './lib/persist.js';
+import {
+  createYooKassaPayment,
+  demoCheckoutEnabled,
+  handleYooKassaWebhook,
+  syncYooKassaOrder,
+  yooKassaConfig,
+} from './lib/yookassa.js';
+import { roomThemes } from './lib/roomThemes.js';
+import { adminRouter } from './routes/admin.js';
+import { feedbackRouter } from './routes/feedback.js';
+import { authRouter } from './routes/auth.js';
 import {
   createSpyRound,
   getSpyDictionary,
@@ -34,19 +48,12 @@ import {
 import {
   activateDemoPro,
   activateDemoPlan,
-  adminGrantAccess,
-  adminRemovePurchase,
-  adminRevokeAccess,
   activatePartyPass,
   addCustomLocation,
   attachOrderPayment,
-  cancelOrder,
   confirmDemoOrder,
-  confirmPaidOrder,
   createOrder,
-  findOrderByPaymentId,
   unlockCustomDictionary,
-  allProfiles,
   getOrCreateProfile,
   hasAdFreeAccess,
   hasTimedGameAccess,
@@ -80,40 +87,16 @@ const server = createServer(app);
 const io = new Server(server, { cors: { origin: true, credentials: true } });
 const port = Number(process.env.PORT || 3100);
 const inactiveRoomTtlMs = Number(process.env.ROOM_TTL_MS || 6 * 60 * 60 * 1000);
-const rateLimits = new Map();
-const authCodes = new Map();
-const feedbackDir = process.env.FEEDBACK_DIR || path.join(__dirname, '..', 'artifacts', 'feedback');
 
 app.use(express.json({ limit: '64kb' }));
 
 app.get('/api/health', (_request, response) => response.json({ ok: true }));
 app.get('/api/status', (_request, response) => response.json({ ok: true, games: ['spy', 'alias', 'bunker'], activeRooms: allRooms().length, analytics: analyticsSnapshot() }));
 app.get('/api/games', (_request, response) => response.json({ games: [spyDefinition, aliasDefinition, bunkerDefinition] }));
-app.post('/api/analytics/track', (request, response) => {
-  try {
-    checkHttpRate(request, 'analytics', 80, 60 * 1000);
-    const event = normalizeAnalyticsEvent(request);
-    track(event.name, event.details);
-    response.json({ ok: true });
-  } catch (error) {
-    response.status(error.status || 400).json({ ok: false, error: error.message || 'Analytics failed' });
-  }
-});
+app.use('/api', feedbackRouter);
 app.post('/api/vk/launch', (request, response) => {
   const result = verifyVkLaunch(request.body?.params || {}, process.env.VK_APP_SECRET);
   response.json(result);
-});
-app.post('/api/feedback', async (request, response) => {
-  try {
-    checkHttpRate(request, 'feedback', 5, 10 * 60 * 1000);
-    const feedback = normalizeFeedback(request);
-    await saveFeedback(feedback);
-    const mail = await sendFeedbackEmail(feedback).catch((error) => ({ delivered: false, error: error.message || 'SMTP failed' }));
-    track('feedback_sent', { topic: feedback.topic, playerId: feedback.playerId, page: feedback.page });
-    response.json({ ok: true, id: feedback.id, saved: true, mailed: Boolean(mail.delivered) });
-  } catch (error) {
-    response.status(error.status || 400).json({ ok: false, error: error.message || 'Feedback failed' });
-  }
 });
 app.post('/api/yookassa/webhook', async (request, response) => {
   try {
@@ -123,37 +106,7 @@ app.post('/api/yookassa/webhook', async (request, response) => {
     response.status(error.status || 400).json({ ok: false, error: error.message || 'YooKassa webhook failed' });
   }
 });
-app.post('/api/auth/request-code', async (request, response) => {
-  try {
-    checkHttpRate(request, 'auth_request', 5, 10 * 60 * 1000);
-    const email = cleanEmail(request.body?.email);
-    const code = process.env.AUTH_TEST_CODE || (process.env.NODE_ENV === 'test' ? '111111' : String(Math.floor(100000 + Math.random() * 900000)));
-    authCodes.set(email, { code, expiresAt: Date.now() + 10 * 60 * 1000 });
-    await sendSystemEmail({
-      to: email,
-      subject: 'Код входа GameHubParty',
-      text: `Ваш код входа в GameHubParty: ${code}\n\nКод действует 10 минут. Если вы не запрашивали вход, просто проигнорируйте письмо.`,
-    });
-    response.json({ ok: true });
-  } catch (error) {
-    response.status(error.status || 400).json({ ok: false, error: error.message || 'Auth code failed' });
-  }
-});
-app.post('/api/auth/verify-code', (request, response) => {
-  try {
-    checkHttpRate(request, 'auth_verify', 10, 10 * 60 * 1000);
-    const email = cleanEmail(request.body?.email);
-    const code = String(request.body?.code || '').replace(/\D/g, '');
-    const saved = authCodes.get(email);
-    if (!saved || saved.expiresAt < Date.now() || saved.code !== code) throw new Error('Код неверный или устарел.');
-    authCodes.delete(email);
-    const profile = attachEmailAccount(request.body?.playerId, email, request.body?.name);
-    persistProfiles();
-    response.json({ ok: true, account: { id: profile.id, email: profile.email, name: profile.name }, profile: publicProfile(profile) });
-  } catch (error) {
-    response.status(error.status || 400).json({ ok: false, error: error.message || 'Auth verify failed' });
-  }
-});
+app.use('/api/auth', authRouter);
 app.get('/api/games/alias/catalog', (_request, response) => response.json({ definition: aliasDefinition, dictionaries: aliasDictionaryPreview }));
 app.get('/api/games/bunker/catalog', (_request, response) => response.json({ definition: bunkerDefinition, fields: bunkerCardFields, contentPacks: bunkerContentPacks }));
 app.get('/api/games/spy/catalog', (_request, response) => response.json({
@@ -174,589 +127,12 @@ app.get('/api/games/spy/catalog', (_request, response) => response.json({
 app.get('/api/games/spy/locations', (_request, response) => response.json({
   locations: getSpyLocations(['base']).map(({ id, name }) => ({ id, name })),
 }));
-app.get('/api/admin/overview', requireAdmin, (_request, response) => {
-  response.json({ ok: true, overview: adminOverview() });
-});
-app.post('/api/admin/orders/:playerId/:orderId/confirm', requireAdmin, (request, response) => {
-  try {
-    const { profile, order } = confirmDemoOrder(request.params.playerId, request.params.orderId);
-    track('admin_order_paid', { type: order.type, productId: order.productId, playerId: profile.id });
-    persistProfiles();
-    response.json({ ok: true, order: adminOrderSummary(profile, order), overview: adminOverview() });
-  } catch (error) {
-    response.status(404).json({ ok: false, error: error.message || 'Order not found' });
-  }
-});
-app.post('/api/admin/profiles/:playerId/grants', requireAdmin, (request, response) => {
-  try {
-    const { profile, purchase } = adminGrantAccess(request.params.playerId, request.body || {});
-    track('admin_grant', { type: purchase.type, productId: purchase.productId, playerId: profile.id });
-    persistProfiles();
-    response.json({ ok: true, profile: adminProfileSummary(profile), purchase, overview: adminOverview() });
-  } catch (error) {
-    response.status(400).json({ ok: false, error: error.message || 'Grant failed' });
-  }
-});
-app.post('/api/admin/profiles/:playerId/revoke', requireAdmin, (request, response) => {
-  try {
-    const profile = adminRevokeAccess(request.params.playerId, request.body || {});
-    track('admin_revoke', { type: request.body?.type, productId: request.body?.productId, playerId: profile.id });
-    persistProfiles();
-    response.json({ ok: true, profile: adminProfileSummary(profile), overview: adminOverview() });
-  } catch (error) {
-    response.status(400).json({ ok: false, error: error.message || 'Revoke failed' });
-  }
-});
-app.delete('/api/admin/profiles/:playerId/purchases/:purchaseId', requireAdmin, (request, response) => {
-  try {
-    const profile = adminRemovePurchase(request.params.playerId, request.params.purchaseId);
-    track('admin_purchase_removed', { playerId: profile.id });
-    persistProfiles();
-    response.json({ ok: true, profile: adminProfileSummary(profile), overview: adminOverview() });
-  } catch (error) {
-    response.status(400).json({ ok: false, error: error.message || 'Remove purchase failed' });
-  }
-});
+app.use('/api/admin', adminRouter);
 
 if (process.env.NODE_ENV === 'production') {
   const dist = path.join(__dirname, '..', 'dist');
   app.use(express.static(dist));
   app.get('/{*splat}', (_request, response) => response.sendFile(path.join(dist, 'index.html')));
-}
-
-function cleanName(value) {
-  const name = String(value || '').trim().slice(0, 24);
-  if (!name) throw new Error('Введите имя');
-  return name;
-}
-
-function yooKassaConfig() {
-  const shopId = String(process.env.YOOKASSA_SHOP_ID || process.env.YOOKASSA_SHOPID || '').trim();
-  const secretKey = String(process.env.YOOKASSA_SECRET_KEY || '').trim();
-  return {
-    shopId,
-    secretKey,
-    enabled: Boolean(shopId && secretKey),
-    apiUrl: String(process.env.YOOKASSA_API_URL || 'https://api.yookassa.ru/v3').replace(/\/+$/, ''),
-  };
-}
-
-function demoCheckoutEnabled() {
-  return process.env.NODE_ENV !== 'production' || process.env.ALLOW_DEMO_CHECKOUT === '1';
-}
-
-function publicBaseUrl() {
-  return String(process.env.PUBLIC_BASE_URL || process.env.SITE_URL || `http://localhost:${port}`).replace(/\/+$/, '');
-}
-
-function yooKassaAuthHeader(config = yooKassaConfig()) {
-  return `Basic ${Buffer.from(`${config.shopId}:${config.secretKey}`).toString('base64')}`;
-}
-
-function orderReturnUrl(order) {
-  const configured = String(process.env.YOOKASSA_RETURN_URL || '').trim();
-  if (configured) return configured;
-  return `${publicBaseUrl()}/store?order=${encodeURIComponent(order.id)}`;
-}
-
-async function yooKassaRequest(pathname, options = {}) {
-  const config = yooKassaConfig();
-  if (!config.enabled) {
-    const error = new Error('YooKassa credentials are not configured');
-    error.status = 503;
-    throw error;
-  }
-  const response = await fetch(`${config.apiUrl}${pathname}`, {
-    ...options,
-    headers: {
-      authorization: yooKassaAuthHeader(config),
-      accept: 'application/json',
-      ...(options.headers || {}),
-    },
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(data.description || data.message || 'YooKassa request failed');
-    error.status = response.status;
-    error.details = data;
-    throw error;
-  }
-  return data;
-}
-
-async function createYooKassaPayment(profile, order) {
-  if (!yooKassaConfig().enabled) return null;
-  if (!profile.email) throw new Error('Войдите по почте перед оплатой, чтобы YooKassa отправила чек.');
-  const payment = await yooKassaRequest('/payments', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'idempotence-key': order.id,
-    },
-    body: JSON.stringify({
-      amount: { value: Number(order.amountRub || 0).toFixed(2), currency: 'RUB' },
-      capture: true,
-      confirmation: { type: 'redirect', return_url: orderReturnUrl(order) },
-      description: `${order.title} (${order.id})`.slice(0, 128),
-      metadata: {
-        playerId: profile.id,
-        orderId: order.id,
-        productType: order.type,
-        productId: order.productId,
-      },
-      receipt: {
-        customer: { email: profile.email },
-        items: [{
-          description: order.title.slice(0, 128),
-          quantity: '1.00',
-          amount: { value: Number(order.amountRub || 0).toFixed(2), currency: 'RUB' },
-          vat_code: Number(process.env.YOOKASSA_VAT_CODE || 1),
-          payment_mode: 'full_payment',
-          payment_subject: 'service',
-        }],
-      },
-    }),
-  });
-  return {
-    id: payment.id,
-    status: payment.status,
-    confirmationUrl: payment.confirmation?.confirmation_url || '',
-  };
-}
-
-async function getYooKassaPayment(paymentId) {
-  return yooKassaRequest(`/payments/${encodeURIComponent(paymentId)}`);
-}
-
-async function verifiedYooKassaPayment(notificationPayment) {
-  const paymentId = notificationPayment?.id;
-  if (!paymentId) throw new Error('YooKassa payment id is missing');
-  if (!yooKassaConfig().enabled) return notificationPayment;
-  return getYooKassaPayment(paymentId);
-}
-
-async function handleYooKassaWebhook(notification) {
-  const event = String(notification?.event || '');
-  if (!['payment.succeeded', 'payment.canceled'].includes(event)) return { ignored: true };
-  const payment = await verifiedYooKassaPayment(notification.object || {});
-  const metadata = payment.metadata || {};
-  let playerId = String(metadata.playerId || '').trim();
-  let orderId = String(metadata.orderId || '').trim();
-  if ((!playerId || !orderId) && payment.id) {
-    const found = findOrderByPaymentId(payment.id);
-    playerId = playerId || found?.profile?.id || '';
-    orderId = orderId || found?.order?.id || '';
-  }
-  if (!playerId || !orderId) throw new Error('YooKassa order metadata is missing');
-
-  if (event === 'payment.canceled' || payment.status === 'canceled') {
-    const { order } = cancelOrder(playerId, orderId, payment.cancellation_details?.reason || 'canceled');
-    persistProfiles();
-    track('order_canceled', { type: order.type, productId: order.productId, playerId, provider: 'yookassa' });
-    return { orderId: order.id, status: order.status };
-  }
-
-  if (payment.status !== 'succeeded') return { ignored: true, status: payment.status };
-  const found = findOrderByPaymentId(payment.id);
-  const orderForCheck = found?.order || getOrCreateProfile(playerId).orders.find((item) => item.id === orderId);
-  if (!orderForCheck) throw new Error('Order not found');
-  const expected = Number(orderForCheck.amountRub || 0).toFixed(2);
-  const actual = Number(payment.amount?.value || 0).toFixed(2);
-  if (expected !== actual || payment.amount?.currency !== 'RUB') {
-    throw new Error('YooKassa payment amount mismatch');
-  }
-  const { profile, order } = confirmPaidOrder(playerId, orderId, 'yookassa', payment.id);
-  track('order_paid', { type: order.type, productId: order.productId, playerId, amountRub: order.amountRub, provider: 'yookassa' });
-  await sendPurchaseAccessEmail(profile, order).catch((error) => console.error('Purchase email failed:', error.message || error));
-  persistProfiles();
-  return { orderId: order.id, status: order.status, profile: publicProfile(profile) };
-}
-
-async function syncYooKassaOrder(playerId, orderId) {
-  const profile = getOrCreateProfile(playerId);
-  const order = profile.orders.find((item) => item.id === String(orderId || '').trim());
-  if (!order) throw new Error('Заказ не найден');
-  if (order.status === 'paid') return { profile, order };
-  if (order.provider !== 'yookassa' || !order.paymentId) return { profile, order };
-  const payment = await getYooKassaPayment(order.paymentId);
-  order.paymentStatus = payment.status || order.paymentStatus || null;
-  if (payment.status === 'canceled') {
-    const result = cancelOrder(playerId, order.id, payment.cancellation_details?.reason || 'canceled');
-    persistProfiles();
-    return result;
-  }
-  if (payment.status !== 'succeeded') {
-    profile.updatedAt = Date.now();
-    persistProfiles();
-    return { profile, order };
-  }
-  const expected = Number(order.amountRub || 0).toFixed(2);
-  const actual = Number(payment.amount?.value || 0).toFixed(2);
-  if (expected !== actual || payment.amount?.currency !== 'RUB') throw new Error('YooKassa payment amount mismatch');
-  const result = confirmPaidOrder(playerId, order.id, 'yookassa', payment.id);
-  result.order.paymentStatus = payment.status;
-  track('order_paid', { type: result.order.type, productId: result.order.productId, playerId, amountRub: result.order.amountRub, provider: 'yookassa' });
-  await sendPurchaseAccessEmail(result.profile, result.order).catch((error) => console.error('Purchase email failed:', error.message || error));
-  persistProfiles();
-  return result;
-}
-
-function toBase64Url(buffer) {
-  return buffer.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
-
-function verifyVkLaunch(params, secret) {
-  const safeParams = Object.fromEntries(Object.entries(params).map(([key, value]) => [String(key), String(value)]));
-  const signedPayload = Object.keys(safeParams)
-    .filter((key) => key.startsWith('vk_'))
-    .sort()
-    .map((key) => `${key}=${safeParams[key]}`)
-    .join('&');
-  const expected = secret && signedPayload
-    ? toBase64Url(crypto.createHmac('sha256', secret).update(signedPayload).digest())
-    : '';
-  const verified = Boolean(secret && safeParams.sign && expected === safeParams.sign);
-  return {
-    ok: true,
-    verified,
-    mode: secret ? 'signature' : 'no_secret',
-    vk: {
-      appId: safeParams.vk_app_id || '',
-      userId: safeParams.vk_user_id || '',
-      platform: safeParams.vk_platform || '',
-      language: safeParams.vk_language || '',
-    },
-  };
-}
-
-function requireAdmin(request, response, next) {
-  const expectedPin = String(process.env.ADMIN_PIN || '1973');
-  const providedPin = String(request.get('x-admin-pin') || request.query.pin || request.body?.pin || '');
-  if (providedPin !== expectedPin) {
-    response.status(403).json({ ok: false, error: 'Admin access denied' });
-    return;
-  }
-  next();
-}
-
-function cleanFeedbackText(value, limit) {
-  return String(value || '').replace(/\s+/g, ' ').trim().slice(0, limit);
-}
-
-function cleanEmail(value) {
-  const email = String(value || '').trim().toLowerCase().slice(0, 160);
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Введите корректную почту.');
-  return email;
-}
-
-function cleanAvatarDataUrl(value) {
-  const dataUrl = String(value || '').trim();
-  if (!dataUrl) return '';
-  if (dataUrl.length > 350000) throw new Error('Картинка слишком большая. Выберите файл поменьше.');
-  if (!/^data:image\/(png|jpe?g|webp);base64,[a-z0-9+/=]+$/i.test(dataUrl)) throw new Error('Поддерживаются PNG, JPG и WEBP.');
-  return dataUrl;
-}
-
-function attachEmailAccount(playerId, email, name) {
-  const existing = allProfiles().find((profile) => profile.email === email);
-  const profile = existing || getOrCreateProfile(playerId || `email-${crypto.randomUUID()}`, name || email.split('@')[0]);
-  profile.email = email;
-  profile.accountType = 'email';
-  if (name) profile.name = cleanFeedbackText(name, 24) || profile.name;
-  profile.updatedAt = Date.now();
-  return profile;
-}
-
-function normalizeFeedback(request) {
-  const topics = new Set(['idea', 'bug', 'payment', 'other']);
-  const topic = topics.has(request.body?.topic) ? request.body.topic : 'other';
-  const message = cleanFeedbackText(request.body?.message, 2000);
-  const contactEmail = cleanFeedbackText(request.body?.contactEmail, 120);
-  if (message.length < 8) throw new Error('Напишите чуть подробнее, чтобы мы поняли ситуацию.');
-  if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) throw new Error('Почта для ответа выглядит некорректно.');
-  return {
-    id: crypto.randomUUID(),
-    topic,
-    message,
-    contactEmail,
-    playerId: cleanFeedbackText(request.body?.playerId, 100),
-    playerName: cleanFeedbackText(request.body?.playerName, 80),
-    page: cleanFeedbackText(request.body?.page, 300),
-    userAgent: cleanFeedbackText(request.get('user-agent'), 300),
-    ip: cleanFeedbackText(request.ip, 80),
-    createdAt: new Date().toISOString(),
-  };
-}
-
-function normalizeAnalyticsEvent(request) {
-  const allowed = new Set(['page_view', 'open_store', 'start_checkout', 'payment_success', 'payment_failed', 'feedback_opened']);
-  const name = String(request.body?.name || '').trim().toLowerCase().replace(/[^a-z0-9:_-]+/g, '_').slice(0, 80);
-  if (!allowed.has(name)) throw new Error('Unknown analytics event');
-  const details = request.body?.details || {};
-  return {
-    name,
-    details: {
-      page: cleanFeedbackText(details.page, 80),
-      path: cleanFeedbackText(details.path, 160),
-      playerId: cleanFeedbackText(details.playerId, 100),
-      sessionId: cleanFeedbackText(details.sessionId, 100),
-      referrer: cleanFeedbackText(details.referrer, 160),
-      source: cleanFeedbackText(details.source || details.utmSource, 80),
-      medium: cleanFeedbackText(details.medium || details.utmMedium, 80),
-      campaign: cleanFeedbackText(details.campaign || details.utmCampaign, 80),
-      productId: cleanFeedbackText(details.productId, 80),
-      type: cleanFeedbackText(details.type, 80),
-      userAgent: cleanFeedbackText(request.get('user-agent'), 180),
-    },
-  };
-}
-
-async function saveFeedback(feedback) {
-  await mkdir(feedbackDir, { recursive: true });
-  await appendFile(path.join(feedbackDir, 'feedback.jsonl'), `${JSON.stringify(feedback)}\n`, 'utf8');
-}
-
-async function sendFeedbackEmail(feedback) {
-  const topicNames = { idea: 'Предложение', bug: 'Баг', payment: 'Оплата', other: 'Другое' };
-  return sendSystemEmail({
-    to: process.env.FEEDBACK_TO || process.env.SUPPORT_EMAIL || 'support@gamehubparty.ru',
-    subject: `GameHubParty: ${topicNames[feedback.topic] || 'Обратная связь'}`,
-    replyTo: feedback.contactEmail,
-    text: [
-      `Тема: ${topicNames[feedback.topic] || feedback.topic}`,
-      `Сообщение: ${feedback.message}`,
-      `Почта для ответа: ${feedback.contactEmail || 'не указана'}`,
-      `Игрок: ${feedback.playerName || '-'} (${feedback.playerId || '-'})`,
-      `Страница: ${feedback.page || '-'}`,
-      `Время: ${feedback.createdAt}`,
-      `User-Agent: ${feedback.userAgent || '-'}`,
-    ].join('\r\n'),
-  });
-}
-
-async function sendPurchaseAccessEmail(profile, order) {
-  if (!profile.email) return { delivered: false, reason: 'email_missing' };
-  return sendSystemEmail({
-    to: profile.email,
-    subject: `GameHubParty: доступ открыт (${order.title})`,
-    text: [
-      `Здравствуйте, ${profile.name || 'игрок'}!`,
-      '',
-      'Оплата прошла, цифровой доступ открыт в вашем профиле GameHubParty.',
-      '',
-      `Заказ: ${order.id}`,
-      `Товар: ${order.title}`,
-      `Сумма: ${order.amountRub} ₽`,
-      `Статус: ${order.status}`,
-      `Платеж YooKassa: ${order.paymentId || '-'}`,
-      '',
-      `Профиль: ${publicBaseUrl()}/profile`,
-      '',
-      'Это письмо подтверждает открытие доступа. Кассовый чек отправляется через платежный/фискальный контур YooKassa на почту, указанную при оплате.',
-    ].join('\r\n'),
-  });
-}
-
-async function sendSystemEmail({ to, subject, text, replyTo = '' }) {
-  const host = process.env.SMTP_HOST;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  if (!host || !user || !pass) return { delivered: false, reason: 'smtp_not_configured' };
-  const from = process.env.FEEDBACK_FROM || user;
-  const socket = tls.connect({ host, port: Number(process.env.SMTP_PORT || 465), servername: host, timeout: 10000 });
-  socket.setEncoding('utf8');
-  const smtp = createSmtpSession(socket);
-  try {
-    await smtp.ready();
-    await smtp.command(`EHLO ${process.env.SMTP_HELO || 'gamehubparty.ru'}`, [250]);
-    await smtp.command('AUTH LOGIN', [334]);
-    await smtp.command(Buffer.from(user).toString('base64'), [334]);
-    await smtp.command(Buffer.from(pass).toString('base64'), [235]);
-    await smtp.command(`MAIL FROM:<${from}>`, [250]);
-    await smtp.command(`RCPT TO:<${to}>`, [250, 251]);
-    await smtp.command('DATA', [354]);
-    socket.write(buildEmail({ from, to, subject, text, replyTo }));
-    await smtp.read([250]);
-    await smtp.command('QUIT', [221]).catch(() => {});
-    return { delivered: true };
-  } finally {
-    socket.end();
-  }
-}
-
-function createSmtpSession(socket) {
-  let buffer = '';
-  const readers = [];
-  const fail = (error) => {
-    while (readers.length) readers.shift().reject(error);
-  };
-  socket.on('data', (chunk) => {
-    buffer += chunk;
-    flushSmtpReaders();
-  });
-  socket.on('error', fail);
-  socket.on('timeout', () => fail(new Error('SMTP timeout')));
-  function flushSmtpReaders() {
-    if (!readers.length) return;
-    const lines = buffer.split(/\r?\n/).filter(Boolean);
-    const finalIndex = lines.findIndex((line) => /^\d{3} /.test(line));
-    if (finalIndex < 0) return;
-    const response = lines.slice(0, finalIndex + 1).join('\n');
-    buffer = lines.slice(finalIndex + 1).join('\r\n');
-    readers.shift().resolve(response);
-    flushSmtpReaders();
-  }
-  function read(expectedCodes) {
-    return new Promise((resolve, reject) => {
-      readers.push({
-        resolve: (response) => {
-          const code = Number(response.slice(0, 3));
-          if (!expectedCodes.includes(code)) reject(new Error(`SMTP ${code}`));
-          else resolve(response);
-        },
-        reject,
-      });
-      flushSmtpReaders();
-    });
-  }
-  return {
-    ready: () => read([220]),
-    read,
-    command: (line, expectedCodes) => {
-      socket.write(`${line}\r\n`);
-      return read(expectedCodes);
-    },
-  };
-}
-
-function encodeMailHeader(value) {
-  return /^[\x20-\x7e]*$/.test(value) ? value : `=?UTF-8?B?${Buffer.from(value).toString('base64')}?=`;
-}
-
-function buildEmail({ from, to, subject, text, replyTo }) {
-  const headers = [
-    `From: GameHubParty <${from}>`,
-    `To: ${to}`,
-    `Subject: ${encodeMailHeader(subject)}`,
-    'MIME-Version: 1.0',
-    'Content-Type: text/plain; charset=UTF-8',
-    'Content-Transfer-Encoding: 8bit',
-  ];
-  if (replyTo) headers.splice(2, 0, `Reply-To: ${replyTo}`);
-  return `${headers.join('\r\n')}\r\n\r\n${String(text || '').replace(/^\./gm, '..')}\r\n.\r\n`;
-}
-
-function adminOrderSummary(profile, order) {
-  return {
-    id: order.id,
-    playerId: profile.id,
-    playerName: profile.name,
-    type: order.type,
-    productId: order.productId,
-    title: order.title,
-    amountRub: order.amountRub,
-    months: order.months || null,
-    status: order.status,
-    provider: order.provider || 'demo',
-    paymentId: order.paymentId || null,
-    paymentStatus: order.paymentStatus || null,
-    createdAt: order.createdAt,
-    paidAt: order.paidAt || null,
-  };
-}
-
-function adminRoomSummary(room) {
-  return {
-    id: room.id,
-    code: room.code,
-    gameId: room.gameId,
-    state: room.state,
-    hostId: room.hostId,
-    hostName: room.players.find((player) => player.id === room.hostId)?.name || '',
-    playersCount: room.players.length,
-    onlineCount: room.players.filter((player) => player.online).length,
-    roundNumber: room.round?.number || 0,
-    roundPhase: room.round?.phase || null,
-    updatedAt: room.updatedAt || room.createdAt || Date.now(),
-    players: room.players.map((player) => ({
-      id: player.id,
-      name: player.name,
-      ready: Boolean(player.ready),
-      online: Boolean(player.online),
-    })),
-  };
-}
-
-function adminProfileSummary(profile) {
-  const publicData = publicProfile(profile);
-  return {
-    id: publicData.id,
-    name: publicData.name,
-    email: publicData.email || '',
-    accountType: publicData.accountType,
-    avatarDataUrl: publicData.avatarDataUrl || '',
-    pro: Boolean(publicData.pro),
-    proPlus: Boolean(publicData.proPlus),
-    subscription: publicData.subscription || null,
-    gamePasses: publicData.gamePasses || [],
-    partyPasses: publicData.partyPasses || [],
-    ownedDictionaryIds: publicData.ownedDictionaryIds || ['base'],
-    ownedDictionaryCount: publicData.ownedDictionaryIds?.length || 0,
-    ownedThemeIds: publicData.ownedThemeIds || ['ghp'],
-    customDictionaryOwned: Boolean(publicData.customDictionaryOwned),
-    purchases: (publicData.purchases || []).slice(0, 10),
-    ordersCount: publicData.orders?.length || 0,
-    purchasesCount: publicData.purchases?.length || 0,
-    updatedAt: publicData.updatedAt || 0,
-  };
-}
-
-function adminOverview() {
-  const profiles = allProfiles().map((profile) => publicProfile(profile));
-  const registeredProfiles = profiles.filter((profile) => profile.accountType === 'email' || profile.email);
-  const orders = profiles
-    .flatMap((profile) => (profile.orders || []).map((order) => adminOrderSummary(profile, order)))
-    .sort((left, right) => (right.createdAt || 0) - (left.createdAt || 0));
-  const rooms = allRooms().map(adminRoomSummary).sort((left, right) => (right.updatedAt || 0) - (left.updatedAt || 0));
-  return {
-    generatedAt: Date.now(),
-    totals: {
-      profiles: registeredProfiles.length,
-      rooms: rooms.length,
-      activeRooms: rooms.filter((room) => room.onlineCount > 0).length,
-      orders: orders.length,
-      pendingOrders: orders.filter((order) => order.status === 'pending').length,
-      paidOrders: orders.filter((order) => order.status === 'paid').length,
-      revenueRub: orders.filter((order) => order.status === 'paid').reduce((sum, order) => sum + (order.amountRub || 0), 0),
-    },
-    analytics: analyticsSnapshot(),
-    rooms,
-    orders,
-    products: {
-      dictionaries: listSpyDictionaries().filter((dictionary) => !dictionary.free).map(({ id, name, priceRub }) => ({ id, name, priceRub })),
-      bundles: listSpyBundles().map(({ id, name, priceRub }) => ({ id, name, priceRub })),
-      subscriptions: [
-        { id: 'pro', name: 'PRO на месяц', priceRub: 299 },
-      ],
-      gamePasses: [
-        { id: 'spy_pass', name: 'Spy Pass на месяц', gameId: 'spy', priceRub: 99 },
-        { id: 'alias_pass', name: 'Alias Pass на месяц', gameId: 'alias', priceRub: 99 },
-        { id: 'bunker_pass', name: 'Bunker Pass на месяц', gameId: 'bunker', priceRub: 99 },
-      ],
-      extras: [
-        { type: 'custom_dictionary', id: 'custom_dictionary', name: 'Конструктор словарей', priceRub: 199 },
-        { type: 'party_pass', id: 'party_pass_24h', name: 'WeekendPass 24 часа', priceRub: 149 },
-      ],
-      themes: roomThemes,
-    },
-    profiles: registeredProfiles.map(adminProfileSummary).sort((left, right) => (right.updatedAt || 0) - (left.updatedAt || 0)),
-  };
-}
-
-function cleanPlayerId(value) {
-  const id = String(value || '').trim();
-  if (!/^[a-zA-Z0-9_-]{1,80}$/.test(id)) throw new Error('Некорректный идентификатор игрока');
-  return id;
 }
 
 async function replyWith(callback, action) {
@@ -808,11 +184,6 @@ function resetRoomGame(room, gameId) {
   room.players.forEach((player) => { player.ready = player.id === room.hostId; });
 }
 
-const roomThemes = [
-  { id: 'ghp', name: 'GHP Classic', priceRub: 0, free: true },
-  { id: 'partyhub', name: 'PartyHub', priceRub: 149, free: false },
-];
-
 function ownedThemeIds(playerId) {
   const profile = getOrCreateProfile(playerId);
   return new Set(['ghp', ...(profile.ownedThemeIds || [])]);
@@ -825,43 +196,7 @@ function assertThemeAvailable(playerId, themeId) {
   return safeThemeId;
 }
 
-function persistProfiles() {
-  scheduleProfileSnapshot(allProfiles);
-}
 
-function persistRooms() {
-  scheduleRoomSnapshot(allRooms);
-}
-
-function checkRate(socket, key, limit, windowMs) {
-  const now = Date.now();
-  const identity = `${socket.handshake.address}:${socket.data.playerId || 'anonymous'}:${key}`;
-  const bucket = rateLimits.get(identity) || { startedAt: now, count: 0 };
-  if (now - bucket.startedAt >= windowMs) {
-    bucket.startedAt = now;
-    bucket.count = 0;
-  }
-  bucket.count += 1;
-  rateLimits.set(identity, bucket);
-  if (bucket.count > limit) throw new Error('Слишком много действий. Подождите немного.');
-}
-
-function checkHttpRate(request, key, limit, windowMs) {
-  const now = Date.now();
-  const identity = `${request.ip}:${key}`;
-  const bucket = rateLimits.get(identity) || { startedAt: now, count: 0 };
-  if (now - bucket.startedAt >= windowMs) {
-    bucket.startedAt = now;
-    bucket.count = 0;
-  }
-  bucket.count += 1;
-  rateLimits.set(identity, bucket);
-  if (bucket.count > limit) {
-    const error = new Error('Слишком много сообщений. Попробуйте чуть позже.');
-    error.status = 429;
-    throw error;
-  }
-}
 
 function setRoundResult(room, winner, reason, extra = {}) {
   if (!room.round || room.round.phase === 'result') return;
