@@ -29,3 +29,8 @@ export function checkHttpRate(request, key, limit, windowMs) {
     throw error;
   }
 }
+
+export function cleanupExpiredRateLimits(maxAgeMs) {
+  const cutoff = Date.now() - maxAgeMs;
+  for (const [key, bucket] of rateLimits) if (bucket.startedAt < cutoff) rateLimits.delete(key);
+}

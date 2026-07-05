@@ -11,3 +11,5 @@ tmp_*
 *.log
 AI/
 outputs/
+.claude/*
+!.claude/launch.json

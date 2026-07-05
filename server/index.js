@@ -19,7 +19,7 @@ import {
   uniquePlayerName,
 } from './roomStore.js';
 import { connectRoomPersistence, loadRoomSnapshot, scheduleRoomSnapshot } from './roomPersistence.js';
-import { checkHttpRate, checkRate } from './lib/rateLimit.js';
+import { checkHttpRate, checkRate, cleanupExpiredRateLimits } from './lib/rateLimit.js';
 import { sendSystemEmail } from './lib/mailer.js';
 import { verifyVkLaunch } from './lib/vk.js';
 import { cleanAvatarDataUrl, cleanName, cleanPlayerId } from './lib/validators.js';
@@ -931,8 +931,7 @@ setInterval(() => {
 
 setInterval(() => {
   if (cleanupInactiveRooms(inactiveRoomTtlMs).length) persistRooms();
-  const cutoff = Date.now() - 10 * 60 * 1000;
-  for (const [key, bucket] of rateLimits) if (bucket.startedAt < cutoff) rateLimits.delete(key);
+  cleanupExpiredRateLimits(10 * 60 * 1000);
 }, 60000);
 
 await connectRoomPersistence();
