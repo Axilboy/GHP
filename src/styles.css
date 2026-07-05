@@ -1975,7 +1975,7 @@ body{padding-bottom:0}.header{position:sticky;top:0;z-index:12;width:min(100%,51
 .bunker-player-card .bunker-card{max-height:410px;overflow:auto}
 .bunker-score-line span:first-child{background:#edf4ff}
 .bunker-score-line span:last-child{background:#f7f3df;color:#6d5a1d}
-.bunker-result-card:before{content:"Á";background:linear-gradient(145deg,#f7f3df,#edf4ff);color:#58763e}
+.bunker-result-card:before{content:"ï¿½";background:linear-gradient(145deg,#f7f3df,#edf4ff);color:#58763e}
 .bunker-result-card .mvp-result-summary{overflow:hidden;border-color:#ffffff55;background:linear-gradient(180deg,#10182022 0,#1018208c 48%,#101820ec 100%),url('./assets/ghp-cover-bunker.webp') center/cover;color:#fff;box-shadow:0 18px 42px #15244a20}
 .bunker-result-card .mvp-result-summary b,.bunker-result-card .mvp-result-summary span{color:#fff;text-shadow:0 2px 16px #0008}
 .bunker-result-card .mvp-result-summary small{color:#e6eefc}
@@ -2283,9 +2283,18 @@ body{padding-bottom:0}.header{position:sticky;top:0;z-index:12;width:min(100%,51
 }
 
 .lobby .sticky {
-  position: static;
-  bottom: auto;
-  margin-top: 14px;
+  position: sticky;
+  bottom: 12px;
+  z-index: 30;
+  margin-top: 6px;
+  box-shadow: 0 14px 32px #1769f652;
+}
+
+.lobby .sticky:disabled {
+  opacity: 1;
+  background: linear-gradient(135deg, #a9c3f0, #9db8ea);
+  color: #fff;
+  box-shadow: 0 10px 24px #18244218;
 }
 
 .settings .setting select {
@@ -3396,4 +3405,65 @@ body{padding-bottom:0}.header{position:sticky;top:0;z-index:12;width:min(100%,51
   .bunker-landing .bunker-hero h1 {
     font-size: 40px;
   }
+}
+
+/* Lobby v2: players first, single ad card, sticky CTA */
+.lobby-players {
+  padding: 4px 0 0;
+}
+
+.lobby-players .section-title > span {
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.lobby-links {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  margin: 2px 0 4px;
+}
+
+.lobby-links .link {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.lobby-links .leave {
+  margin: 0;
+}
+
+.adsterra-ad.adsterra-failed {
+  display: none;
+}
+
+.lobby-ad-banner .adsterra-ad {
+  justify-self: center;
+}
+
+.lobby-ad-upsell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lobby-ad-upsell p {
+  flex: 1;
+  margin: 0;
+  color: var(--soft);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.lobby-ad-upsell p b {
+  color: var(--ink);
+}
+
+.lobby-ad-banner.ad-free {
+  border-color: #c9f0e3;
+  background: linear-gradient(145deg, #f0fff9, #edf4ff);
+}
+
+.lobby-ad-banner.ad-free span {
+  color: var(--mint);
 }

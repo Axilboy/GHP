@@ -138,19 +138,17 @@ export function SessionExitModal({ close, confirm }) {
 }
 
 export function LobbyPlayerAdBanner({ adPolicy, navigate }) {
+  if (adPolicy?.adFree) {
+    return <section className="lobby-ad-banner ad-free"><div><span>Без рекламы</span><b>{adPolicy.sponsorName || 'PRO-игрок'} убрал рекламу для всей комнаты</b><p>Раунды будут начинаться сразу, без пауз.</p></div></section>;
+  }
   if (!adPolicy?.enabled) return null;
   return <section className="lobby-ad-banner" data-ad-slot="lobby_player_banner">
-    <div><span>Free-комната</span><b>Короткая пауза перед стартом</b><p>Во время роли, таймера и голосования рекламы не будет. WeekendPass, Game Pass или PRO отключит паузы для всей комнаты.</p></div>
     <AdsterraBanner unit="mobile320x50" slot="lobby_player_banner" />
-    <button className="button small secondary" onClick={() => navigate('store')}>Убрать рекламу</button>
+    <div className="lobby-ad-upsell">
+      <p><b>Free-комната.</b> Короткая пауза перед раундом. WeekendPass, Game Pass или PRO убирает её для всей комнаты.</p>
+      <button className="button small secondary" onClick={() => navigate('store')}>Убрать рекламу</button>
+    </div>
   </section>;
-}
-
-export function AdStatusCard({ adPolicy, navigate }) {
-  if (adPolicy?.adFree) {
-    return <section className="ad-status-card ad-free"><span>Без рекламы</span><b>{adPolicy.sponsorName || 'PRO-игрок'} убрал рекламу для всей комнаты</b><p>Раунд начнется сразу, без рекламной паузы.</p></section>;
-  }
-  return <section className="ad-status-card"><span>Free-режим</span><b>Паузы можно убрать для всех</b><p>Игра не прерывается во время роли, таймера и голосования. WeekendPass или PRO убирает короткие паузы у всей комнаты.</p><button className="button small secondary" onClick={() => navigate('store')}>Убрать паузы</button></section>;
 }
 
 export function AdBreakModal({ placement, slot = 'internal_ad_slot', seconds = 5, continueLabel = 'Продолжить', onContinue, close }) {
@@ -233,7 +231,7 @@ export function AdsterraBanner({ unit, slot }) {
       container.innerHTML = '';
     };
   }, [config.height, config.key, config.src, config.width, slot]);
-  return <div className={`adsterra-ad adsterra-${unit} ${status === 'loaded' ? 'adsterra-loaded' : ''}`} style={{ '--ad-width': `${config.width}px`, '--ad-height': `${config.height}px` }} data-ad-slot={slot}>
+  return <div className={`adsterra-ad adsterra-${unit} ${status === 'loaded' ? 'adsterra-loaded' : ''} ${status === 'failed' ? 'adsterra-failed' : ''}`} style={{ '--ad-width': `${config.width}px`, '--ad-height': `${config.height}px` }} data-ad-slot={slot}>
     <div ref={containerRef} className="adsterra-script-slot" aria-label={`Adsterra ${slot}`} />
     {status === 'failed' && <span className="adsterra-fallback">Реклама не загрузилась</span>}
   </div>;
