@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Header } from '../../shared/Header';
 import { formatTime } from '../../shared/helpers';
 
@@ -53,12 +54,15 @@ export function LeaveLink({ leave }) {
 
 // Флип-карта с секретом. Скин задаётся className (например, secret-role-card
 // или bunker-secret-card) — новые виды карточек добавляются только в CSS.
+// После первого открытия карта переворачивается по каждому нажатию:
+// рубашка → лицо → рубашка, чтобы её можно было прятать и смотреть заново.
 export function SecretCard({ className = '', revealed, onReveal, back = {}, front = {}, ariaLabel }) {
+  const [faceDown, setFaceDown] = useState(false);
+  const showFront = revealed && !faceDown;
   return <button
-    className={`${className} ${revealed ? 'revealed' : ''}`}
-    onClick={revealed ? undefined : onReveal}
+    className={`${className} ${showFront ? 'revealed' : ''}`}
+    onClick={revealed ? () => setFaceDown((current) => !current) : onReveal}
     aria-label={ariaLabel}
-    disabled={Boolean(revealed)}
   >
     <span className="role-card-inner">
       <span className="role-card-face role-card-back"><b>{back.icon || '?'}</b><small>{back.label}</small>{back.hint && <em>{back.hint}</em>}</span>

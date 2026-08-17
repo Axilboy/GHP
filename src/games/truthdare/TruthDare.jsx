@@ -1,5 +1,5 @@
 import { getOrCreateDisplayName } from '../../identity';
-import { GameShell, LeaveLink, PhaseScreen } from '../engine/GameShell';
+import { GameShell, LeaveLink, PhaseScreen, ProgressNote, WaitingNote } from '../engine/GameShell';
 import { Header, SubscriptionBadge, VersionBadge } from '../../shared/Header';
 import { Counter, ErrorText, GameSwitcher, JoinModal, SeoLinks, Setting } from '../../shared/ui';
 import { LandingAccessShowcase, LandingPlaybook } from '../../shared/Landing';
@@ -9,7 +9,7 @@ const deckNames = {
   family: 'Лёгкий',
   party: 'Вечеринка',
   drinks: 'Бар и друзья',
-  couples: 'Для влюбленных',
+  couples: 'Для влюблённых',
   adult_couples: '18+ для пар',
   adult_party: '18+ вписка',
   fandom: 'Фан-вселенные',
@@ -38,7 +38,7 @@ export function TruthDareLanding({ create, join, joinOpen, closeJoin, onJoin, er
       <div className="landing-art truthdare-hero-art" />
       <span className="eyebrow">Правда или действие онлайн</span>
       <h1>Тяните карточки, отвечайте честно или принимайте вызов</h1>
-      <p>Телефон сам выбирает игрока, тип задания и следующую карточку. Подходит для быстрых домашних посиделок, вечеринок и компаний, где нужно разогреть разговор.</p>
+      <p>Ход идёт по кругу, игрок сам выбирает правду или действие, а компания решает, засчитать ли карточку. Подходит для быстрых домашних посиделок, вечеринок и компаний, где нужно разогреть разговор.</p>
       <div className="actions">
         <button className="button primary" onClick={startOrUpgrade}>{proActive ? 'Начать игру' : 'Открыть PRO'}</button>
         <button className="button secondary join-button" onClick={join}>Войти по коду</button>
@@ -57,26 +57,91 @@ export function TruthDareLanding({ create, join, joinOpen, closeJoin, onJoin, er
   </main>;
 }
 
-export function TruthDareGame({ room, action, leave, navigate, error }) {
-  const activeName = room.round?.activePlayerName || 'Игрок';
-  const promptType = room.round?.promptType || 'truth';
-  const typeName = promptTypeNames[promptType] || 'Карточка';
-  return <GameShell gameId="truthdare" room={room} navigate={navigate} right={<span className="badge">{deckNames[room.settings.deck] || 'Вечеринка'}</span>}>
-    <PhaseScreen className="td-play" eyebrow={`Карточка ${room.round?.number || 1} · ${deckNames[room.settings.deck] || 'Вечеринка'}`}>
-      <div className={`td-card td-${promptType}`}>
-        <span>{typeName} для</span>
-        <b>{activeName}</b>
-        <p>{room.round?.promptText || 'Готовим карточку...'}</p>
-      </div>
-      <div className="td-actions">
-        <button className="button primary" onClick={() => action('truthdare_mark_prompt', { result: 'done' })}>Выполнено</button>
-        <button className="button secondary" onClick={() => action('truthdare_mark_prompt', { result: 'skip' })}>Следующий</button>
-      </div>
+const levelNames = { 1: 'Разогрев', 2: 'Вечеринка', 3: 'Смелая' };
+
+export function TruthDareGame({ room, me, action, leave, navigate, error }) {
+  const round = room.round || {};
+  const deckName = deckNames[room.settings.deck] || 'Вечеринка';
+  const isActive = round.activePlayerId === me?.id;
+  const activeName = round.activePlayerName || 'Игрок';
+  const shell = (children) => <GameShell gameId="truthdare" room={room} navigate={navigate} right={<span className="badge">{deckName}</span>}>{children}</GameShell>;
+
+  if (room.state === 'match_result') {
+    return shell(<PhaseScreen variant="focus" className="td-finish" eyebrow="Игра окончена" title={`${round.result?.winnerName || activeName} побеждает`}>
+      <p className="phase-lead">Набрано {round.result?.score || 0} засчитанных карточек. Компания решала каждую.</p>
+      <TruthDareScoreboard room={room} />
+      <LeaveLink leave={leave} />
+    </PhaseScreen>);
+  }
+
+  // Ход: сначала выбор, потом карточка, потом суд компании.
+  if (round.phase === 'truthdare_choice') {
+    return shell(<PhaseScreen className="td-play" eyebrow={`Ход ${round.number || 1} · ${deckName}`} title={isActive ? 'Что выбираешь?' : `Ходит ${activeName}`}>
+      {isActive ? <>
+        <p className="phase-lead">Выбери сам — карточку увидишь только после выбора.</p>
+        <div className="td-choice">
+          <button className="td-choice-card td-truth" onClick={() => action('truthdare_choose', { promptType: 'truth' })}>
+            <b>Правда</b><small>Честный ответ на вопрос</small>
+          </button>
+          <button className="td-choice-card td-dare" onClick={() => action('truthdare_choose', { promptType: 'dare' })}>
+            <b>Действие</b><small>Задание для компании</small>
+          </button>
+        </div>
+        <RefuseButton room={room} action={action} />
+      </> : <WaitingNote>{activeName} выбирает правду или действие.</WaitingNote>}
       {error && <ErrorText text={error} />}
       <TruthDareScoreboard room={room} />
       <LeaveLink leave={leave} />
-    </PhaseScreen>
-  </GameShell>;
+    </PhaseScreen>);
+  }
+
+  if (round.phase === 'truthdare_review') {
+    const alreadyVoted = round.myReviewVote !== null && round.myReviewVote !== undefined;
+    return shell(<PhaseScreen className="td-play" eyebrow="Решает компания" title={`Засчитать ${activeName}?`}>
+      <PromptCard round={round} activeName={activeName} />
+      {isActive
+        ? <WaitingNote>Компания решает, засчитать ли карточку. Очко даётся только за принятую.</WaitingNote>
+        : <div className="vote-list two-actions">
+          <button className={round.myReviewVote === true ? 'selected' : ''} disabled={alreadyVoted} onClick={() => action('truthdare_review_vote', { accepted: true })}>Засчитать</button>
+          <button className={round.myReviewVote === false ? 'selected danger-choice' : ''} disabled={alreadyVoted} onClick={() => action('truthdare_review_vote', { accepted: false })}>Не засчитывать</button>
+        </div>}
+      <ProgressNote>Проголосовали: {round.reviewVotesCount || 0} из {round.juryCount || 0}</ProgressNote>
+      {error && <ErrorText text={error} />}
+      <TruthDareScoreboard room={room} />
+      <LeaveLink leave={leave} />
+    </PhaseScreen>);
+  }
+
+  return shell(<PhaseScreen className="td-play" eyebrow={`Ход ${round.number || 1} · ${deckName}`} title={isActive ? 'Твоя карточка' : `Сейчас ходит ${activeName}`}>
+    <PromptCard round={round} activeName={activeName} />
+    {isActive ? <>
+      <button className="button primary full" onClick={() => action('truthdare_submit')}>Я сделал — на суд компании</button>
+      <RefuseButton room={room} action={action} />
+    </> : <WaitingNote>{activeName} отвечает вслух. Потом вы решите, засчитать ли карточку.</WaitingNote>}
+    {error && <ErrorText text={error} />}
+    <TruthDareScoreboard room={room} />
+    <LeaveLink leave={leave} />
+  </PhaseScreen>);
+}
+
+function PromptCard({ round, activeName }) {
+  const promptType = round.promptType || 'truth';
+  return <div className={`td-card td-${promptType}`}>
+    <span>{promptTypeNames[promptType] || 'Карточка'} для</span>
+    <b>{activeName}</b>
+    <p>{round.promptText || 'Готовим карточку...'}</p>
+    {round.promptLevel && <em className={`td-level td-level-${round.promptLevel}`}>{levelNames[round.promptLevel]}</em>}
+  </div>;
+}
+
+function RefuseButton({ room, action }) {
+  const left = room.myRefusalsLeft ?? 0;
+  return <div className="td-refuse">
+    <button className="button secondary full" disabled={left <= 0} onClick={() => action('truthdare_refuse')}>
+      {left > 0 ? 'Отказаться' : 'Отказы закончились'}
+    </button>
+    <small>{left > 0 ? `Осталось отказов: ${left}. Очко за отказ не даётся.` : 'Жетоны отказа кончились — карточку придётся выполнить.'}</small>
+  </div>;
 }
 
 export function TruthDareHostSettings({ room, catalog = {}, profile, update, changeGame, themeSettings }) {
@@ -93,7 +158,7 @@ export function TruthDareHostSettings({ room, catalog = {}, profile, update, cha
       <Setting label="Колода"><select value={room.settings.deck} onChange={(event) => update({ deck: event.target.value })}>{decks.map((deck) => { const locked = !hasThemedContentAccess(profile, 'truthdare', deck); return <option key={deck.id} value={deck.id} disabled={locked}>{deck.name || deckNames[deck.id]} · {locked ? 'пропуск или PRO' : deck.free || deck.tier === 'free' ? 'включена' : 'открыта'}</option>; })}</select></Setting>
       <Setting label="Цель"><Counter value={room.settings.targetScore} min={5} max={30} change={(targetScore) => update({ targetScore })} /></Setting>
     </details>
-    <p className="settings-note">За выполненную карточку игрок получает очко. Тематический пропуск открывает свою колоду, а PRO открывает все колоды разом.</p>
+    <p className="settings-note">Очко даётся только за карточку, которую засчитала компания. У каждого есть два отказа на игру. Тематический пропуск открывает свою колоду, а PRO открывает все колоды разом.</p>
     {themeSettings}
   </section>;
 }
@@ -103,7 +168,7 @@ export function TruthDareLobbySummary({ room, themeSummary }) {
     <span>Выбрана игра</span>
     <h2>Правда или действие</h2>
     <p>{deckNames[room.settings.deck] || 'Вечеринка'} · до {room.settings.targetScore} выполненных карточек</p>
-    <small>Телефон выберет игрока и покажет правду или действие. Можно выполнять или быстро передавать ход дальше.</small>
+    <small>Ход идёт по кругу, игрок сам выбирает правду или действие, а компания решает, засчитать ли карточку.</small>
     {themeSummary}
   </section>;
 }
@@ -114,7 +179,7 @@ export function TruthDareScoreLine({ room }) {
 }
 
 export function TruthDareRulesModal({ close }) {
-  return <div className="backdrop" onMouseDown={close}><section className="modal rules-modal" onMouseDown={(event) => event.stopPropagation()}><div className="modal-title"><div><span className="eyebrow">Перед первой карточкой</span><h2>Как играть</h2></div><button className="close" onClick={close}>×</button></div><ol><li><b>Телефон выбирает игрока</b><span>На экране появится имя участника и карточка: правда или действие.</span></li><li><b>Игрок отвечает или выполняет</b><span>Если задание принято, нажмите “Выполнено” и игрок получит очко.</span></li><li><b>Можно пропустить</b><span>Кнопка “Следующий” передаст ход дальше без очков. Договоритесь о настроении игры заранее.</span></li></ol><p className="guest-name-note">Лучше держать темп быстрым: короткие ответы, много смеха, без давления.</p><button className="button primary full" onClick={close}>Понятно, играем</button></section></div>;
+  return <div className="backdrop" onMouseDown={close}><section className="modal rules-modal" onMouseDown={(event) => event.stopPropagation()}><div className="modal-title"><div><span className="eyebrow">Перед первой карточкой</span><h2>Как играть</h2></div><button className="close" onClick={close}>×</button></div><ol><li><b>Игрок выбирает сам</b><span>Телефон передаёт ход по кругу, а правду или действие выбирает сам игрок — карточку он видит только после выбора.</span></li><li><b>Компания решает, засчитать ли</b><span>После ответа остальные голосуют «Засчитать» или «Не засчитывать». Очко даётся только за принятую карточку.</span></li><li><b>Отказ стоит жетона</b><span>На игру даётся два отказа. Когда они кончились, карточку придётся выполнять.</span></li></ol><p className="guest-name-note">Карточки становятся смелее вместе с выбранной колодой. Держите темп быстрым: короткие ответы, много смеха, без давления.</p><button className="button primary full" onClick={close}>Понятно, играем</button></section></div>;
 }
 
 function truthDareLeader(room) {

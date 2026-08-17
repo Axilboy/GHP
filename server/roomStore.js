@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { aliasDefinition, normalizeAliasSettings } from './games/alias/index.js';
 import { bunkerDefinition, currentBunkerRevealPlayer, normalizeBunkerSettings, publicBunkerCards } from './games/bunker/index.js';
 import { normalizeSpySettings, spyDefinition } from './games/spy/index.js';
-import { normalizeTruthDareSettings, truthDareDefinition } from './games/truthdare/index.js';
+import { normalizeTruthDareSettings, refusalsLeft, truthDareDefinition } from './games/truthdare/index.js';
 
 const rooms = new Map();
 const roomCodes = new Map();
@@ -136,6 +136,12 @@ export function publicRoom(room, playerId, extra = {}) {
     activePlayerName: room.round.activePlayerName,
     promptType: room.round.promptType,
     promptText: room.round.promptText,
+    promptLevel: room.round.promptLevel,
+    reviewVotesCount: Object.keys(room.round.reviewVotes || {}).length,
+    myReviewVote: room.round.reviewVotes?.[playerId] ?? null,
+    juryCount: room.gameId === 'truthdare'
+      ? room.players.filter((player) => player.online && player.id !== room.round.activePlayerId).length
+      : 0,
   } : null;
   return {
     id: room.id,
@@ -151,6 +157,7 @@ export function publicRoom(room, playerId, extra = {}) {
     themeSuggestions: room.themeSuggestions || [],
     players: room.players,
     round,
+    myRefusalsLeft: room.gameId === 'truthdare' ? refusalsLeft(room, playerId) : null,
     adPolicy: extra.adPolicy || { enabled: true, adFree: false, provider: 'stub', placements: ['pre_round', 'post_round', 'lobby_player_banner'] },
   };
 }

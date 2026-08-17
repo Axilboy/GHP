@@ -83,7 +83,7 @@ import {
   publicBunkerCards,
   startBunkerAfterBriefing,
 } from './games/bunker/index.js';
-import { advanceTruthDareRound, createTruthDareRound, truthDareDecks, truthDareDefinition } from './games/truthdare/index.js';
+import { chooseTruthDarePrompt, createTruthDareRound, finishTruthDareTurn, refuseTruthDare, submitTruthDareAnswer, truthDareDecks, truthDareDefinition, truthDareJury, voteTruthDare } from './games/truthdare/index.js';
 import { getContentThemeIds, listThemePasses } from './games/thematicPasses.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -944,14 +944,59 @@ io.on('connection', (socket) => {
     return {};
   }));
 
-  socket.on('truthdare_mark_prompt', ({ roomId, result }, callback) => replyWith(callback, () => {
-    checkRate(socket, 'truthdare_mark_prompt', 30, 10000);
+  // Активный игрок сам выбирает правду или действие и только потом видит текст.
+  socket.on('truthdare_choose', ({ roomId, promptType }, callback) => replyWith(callback, () => {
+    checkRate(socket, 'truthdare_choose', 30, 10000);
+    const room = getRoom(roomId);
+    requireRoomPlayer(room, socket.data.playerId);
+    if (room?.gameId !== 'truthdare' || room.round?.phase !== 'truthdare_choice') throw new Error('Сейчас нет выбора карточки');
+    if (room.round.activePlayerId !== socket.data.playerId) throw new Error('Выбирает только активный игрок');
+    if (!['truth', 'dare'].includes(promptType)) throw new Error('Выберите правду или действие');
+    chooseTruthDarePrompt(room, promptType);
+    emitRoom(room);
+    return {};
+  }));
+
+  socket.on('truthdare_submit', ({ roomId }, callback) => replyWith(callback, () => {
+    checkRate(socket, 'truthdare_submit', 30, 10000);
     const room = getRoom(roomId);
     requireRoomPlayer(room, socket.data.playerId);
     if (room?.gameId !== 'truthdare' || room.round?.phase !== 'truthdare_turn') throw new Error('Сейчас нет активного задания');
-    if (!['done', 'skip'].includes(result)) throw new Error('Непонятный результат задания');
-    advanceTruthDareRound(room, result);
-    track('round_finished', { gameId: 'truthdare', reason: result, roomId: room.id });
+    if (room.round.activePlayerId !== socket.data.playerId) throw new Error('Карточку выполняет активный игрок');
+    if (!truthDareJury(room).length) {
+      finishTruthDareTurn(room, 'accepted');
+      emitRoom(room);
+      return {};
+    }
+    submitTruthDareAnswer(room);
+    emitRoom(room);
+    return {};
+  }));
+
+  // Засчитывает карточку компания, а не сам игрок.
+  socket.on('truthdare_review_vote', ({ roomId, accepted }, callback) => replyWith(callback, () => {
+    checkRate(socket, 'truthdare_review_vote', 40, 10000);
+    const room = getRoom(roomId);
+    requireRoomPlayer(room, socket.data.playerId);
+    if (room?.gameId !== 'truthdare' || room.round?.phase !== 'truthdare_review') throw new Error('Сейчас нет голосования');
+    if (room.round.activePlayerId === socket.data.playerId) throw new Error('Свою карточку не засчитывают сами');
+    const outcome = voteTruthDare(room, socket.data.playerId, accepted === true);
+    if (outcome) {
+      finishTruthDareTurn(room, outcome);
+      track('round_finished', { gameId: 'truthdare', reason: outcome, roomId: room.id });
+    }
+    emitRoom(room);
+    return {};
+  }));
+
+  socket.on('truthdare_refuse', ({ roomId }, callback) => replyWith(callback, () => {
+    checkRate(socket, 'truthdare_refuse', 20, 10000);
+    const room = getRoom(roomId);
+    requireRoomPlayer(room, socket.data.playerId);
+    if (room?.gameId !== 'truthdare' || !['truthdare_choice', 'truthdare_turn'].includes(room.round?.phase)) throw new Error('Сейчас нельзя отказаться');
+    if (room.round.activePlayerId !== socket.data.playerId) throw new Error('Отказаться может только активный игрок');
+    refuseTruthDare(room, socket.data.playerId);
+    track('round_finished', { gameId: 'truthdare', reason: 'refused', roomId: room.id });
     emitRoom(room);
     return {};
   }));

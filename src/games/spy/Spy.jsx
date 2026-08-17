@@ -85,8 +85,14 @@ export function RoleReveal({ room, card, revealRole, action, isHost, navigate, e
 
 export function Discussion({ room, card, action, navigate, now, error }) {
   const [guessOpen, setGuessOpen] = useState(false);
+  const [voteRequested, setVoteRequested] = useState(false);
   const copy = spySubjectCopy(room.round.subjectType || room.settings.subjectType);
-  return <GameShell gameId="spy" room={room} navigate={navigate} gameTitle="Шпион" right={<TimerBadge endsAt={room.round.endsAt} now={now} />}><div className="play-layout wrap"><section className="section"><span className="eyebrow">Обсуждение · раунд {room.round.number}</span><h1 className="play-title">{room.round.subjectType === 'item' ? 'Вычислите вещь и шпиона' : 'Найдите шпиона'}</h1><p>{copy.discussionHint}</p></section><aside className="section controls"><h2>Действия</h2>{card?.isSpy && room.settings.allowSpyGuess ? <button className="button primary full" onClick={() => setGuessOpen(true)}>Остановить и ответить</button> : <WaitingNote>Обсуждайте вслух. Когда время закончится, голосование начнётся автоматически.</WaitingNote>}<div className="score-line"><span>Мирные: {room.scores.civilians}</span><span>Шпионы: {room.scores.spies}</span></div>{error && <ErrorText text={error} />}</aside></div>{guessOpen && <GuessModal room={room} action={action} close={() => setGuessOpen(false)} />}</GameShell>;
+  const onlineCount = room.players.filter((player) => player.online).length;
+  // Сервер начинает голосование, когда о нём просит больше половины онлайн-игроков.
+  const votesNeeded = Math.floor(onlineCount / 2) + 1;
+  const votesAsked = room.round.voteStartRequestsCount || 0;
+  const callVote = () => action('request_vote').then(() => setVoteRequested(true)).catch(() => {});
+  return <GameShell gameId="spy" room={room} navigate={navigate} gameTitle="Шпион" right={<TimerBadge endsAt={room.round.endsAt} now={now} />}><div className="play-layout wrap"><section className="section"><span className="eyebrow">Обсуждение · раунд {room.round.number}</span><h1 className="play-title">{room.round.subjectType === 'item' ? 'Вычислите вещь и шпиона' : 'Найдите шпиона'}</h1><p>{copy.discussionHint}</p></section><aside className="section controls"><h2>Действия</h2><button className="button call-vote full" disabled={voteRequested} onClick={callVote}>ШПИОН!</button><small className="call-vote-note">{voteRequested ? `Вы просите голосование. Уже просят: ${votesAsked} из ${votesNeeded}.` : `Прервать обсуждение и голосовать. Нужно ${votesNeeded} из ${onlineCount} игроков${votesAsked ? `, уже просят ${votesAsked}` : ''}.`}</small>{card?.isSpy && room.settings.allowSpyGuess && <button className="button primary full" onClick={() => setGuessOpen(true)}>Остановить и ответить</button>}<WaitingNote>Когда время закончится, голосование начнётся автоматически.</WaitingNote><div className="score-line"><span>Мирные: {room.scores.civilians}</span><span>Шпионы: {room.scores.spies}</span></div>{error && <ErrorText text={error} />}</aside></div>{guessOpen && <GuessModal room={room} action={action} close={() => setGuessOpen(false)} />}</GameShell>;
 }
 
 export function GuessModal({ room, action, close }) {

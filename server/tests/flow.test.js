@@ -246,6 +246,50 @@ test('spy answer is reviewed by civilian vote', { timeout: 15000 }, async () => 
   }
 });
 
+test('players can call a vote during discussion by majority', { timeout: 15000 }, async () => {
+  const callPort = 5300 + Math.floor(Math.random() * 1000);
+  const callUrl = `http://127.0.0.1:${callPort}`;
+  const server = spawn(process.execPath, ['server/index.js'], {
+    cwd: process.cwd(),
+    env: { ...process.env, PORT: String(callPort), NODE_ENV: 'production' },
+    stdio: 'ignore',
+  });
+  const sockets = [];
+  try {
+    assert.equal((await waitForServer(`${callUrl}/api/health`)).status, 200);
+    for (let index = 0; index < 4; index += 1) {
+      const socket = io(callUrl, { transports: ['websocket'] });
+      sockets.push(socket);
+      await new Promise((resolve) => socket.once('connect', resolve));
+      socket.emit('identify', { playerId: `c${index + 1}` });
+    }
+    const created = await request(sockets[0], 'create_room', { playerId: 'c1', name: 'Host' });
+    const roomId = created.room.id;
+    await Promise.all(sockets.slice(1).map((socket, index) => request(socket, 'join_room', { playerId: `c${index + 2}`, name: `P${index + 2}`, code: created.room.code })));
+    await Promise.all(sockets.slice(1).map((socket) => request(socket, 'set_ready', { roomId, ready: true })));
+    await request(sockets[0], 'start_round', { roomId });
+    await Promise.all(sockets.map((socket) => request(socket, 'get_role', { roomId })));
+    const discussion = waitFor(sockets[0], 'room_updated', (room) => room.round?.phase === 'discussion');
+    await Promise.all(sockets.map((socket) => request(socket, 'role_seen', { roomId })));
+    await discussion;
+
+    // Меньшинство просит голосование — раунд продолжается.
+    const counted = waitFor(sockets[0], 'room_updated', (room) => room.round?.voteStartRequestsCount === 1);
+    await request(sockets[0], 'request_vote', { roomId });
+    assert.equal((await counted).round.phase, 'discussion');
+    // Повторный запрос того же игрока не накручивает счётчик.
+    await request(sockets[0], 'request_vote', { roomId });
+
+    const voting = waitFor(sockets[0], 'room_updated', (room) => room.round?.phase === 'voting');
+    await request(sockets[1], 'request_vote', { roomId });
+    await request(sockets[2], 'request_vote', { roomId });
+    assert.equal((await voting).round.phase, 'voting');
+  } finally {
+    sockets.forEach((socket) => socket.disconnect());
+    server.kill();
+  }
+});
+
 test('four players can complete alias turns and finish a match', { timeout: 15000 }, async () => {
   const aliasPort = 6300 + Math.floor(Math.random() * 1000);
   const aliasUrl = `http://127.0.0.1:${aliasPort}`;

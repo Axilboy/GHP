@@ -980,6 +980,7 @@ body{padding-bottom:0}.header{position:sticky;top:0;z-index:12;width:min(100%,51
 }
 
 .dictionary-checklist label {
+  display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
   gap: 10px;
@@ -1005,6 +1006,25 @@ body{padding-bottom:0}.header{position:sticky;top:0;z-index:12;width:min(100%,51
 
 .dictionary-checklist .locked {
   opacity: .58;
+}
+
+/* Кнопка досрочного голосования в обсуждении Шпиона. */
+.button.call-vote {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+  letter-spacing: .08em;
+}
+
+.button.call-vote:disabled {
+  opacity: .55;
+}
+
+.call-vote-note {
+  display: block;
+  margin-top: 8px;
+  color: var(--soft);
+  font-size: 12px;
 }
 
 .admin-bulk-actions {
@@ -1953,7 +1973,7 @@ body{padding-bottom:0}.header{position:sticky;top:0;z-index:12;width:min(100%,51
   }
 }
 .session-return-banner{position:fixed;z-index:18;top:76px;left:50%;width:min(100% - 24px,480px);display:grid;grid-template-columns:1fr;gap:12px;overflow:hidden;padding:15px;border:1px solid #dce6f7;border-radius:22px;background:linear-gradient(145deg,#fff,#f3f7ff);box-shadow:0 20px 52px #15244a24;transform:translateX(-50%);backdrop-filter:blur(16px)}.session-return-glow{position:absolute;right:-46px;top:-58px;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,#ffb19988 0,#1769f600 68%);pointer-events:none}.session-return-copy{position:relative;display:grid;gap:3px}.session-return-copy span{color:var(--accent);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}.session-return-copy b{font-size:16px;letter-spacing:-.02em}.session-return-copy small{max-width:360px;color:var(--soft);font-size:11px;line-height:1.45}.session-return-actions{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:8px}.session-return-actions .button{min-height:42px}.session-exit-backdrop{z-index:30}.session-exit-modal{padding:22px 18px 20px;text-align:left}.session-exit-modal h2{font-size:28px;margin:0 0 8px;letter-spacing:-.04em}.session-exit-modal p{margin:0 0 18px;font-size:14px}@media(min-width:761px){.session-return-banner{grid-template-columns:1fr auto;align-items:center}.session-return-actions{width:184px}.session-exit-modal{border-radius:22px}}
-.role-reveal-screen{justify-content:flex-start}.role-reveal-screen:before{display:none}.role-reveal-screen>h1{font-size:clamp(34px,10vw,50px);letter-spacing:0;margin-bottom:8px}.role-reveal-screen>p{margin-top:0}.secret-role-card{width:100%;height:315px;margin:18px 0;border:0;background:transparent;perspective:1200px;padding:0}.secret-role-card:disabled{cursor:default;opacity:1}.role-card-inner{position:relative;width:100%;height:100%;display:block;transition:transform .55s cubic-bezier(.2,.8,.2,1);transform-style:preserve-3d}.secret-role-card.revealed .role-card-inner{transform:rotateY(180deg)}.role-card-face{position:absolute;inset:0;display:grid;align-content:center;justify-items:center;gap:12px;padding:28px;border:1px solid #ffffff42;border-radius:30px;backface-visibility:hidden;box-shadow:0 24px 60px #14224a25}.role-card-back{overflow:hidden;background:radial-gradient(circle at 25% 20%,#ffffff28 0,#ffffff00 28%),linear-gradient(145deg,#15234f,#1769f6 55%,#ff756a);color:#fff}.role-card-back:before{content:"";position:absolute;inset:18px;border:1px solid #ffffff38;border-radius:24px}.role-card-back:after{content:"";position:absolute;width:190px;height:190px;right:-64px;bottom:-72px;border-radius:50%;background:#ffffff18}.role-card-front{background:linear-gradient(145deg,#fff,#f3f7ff);color:var(--ink);transform:rotateY(180deg)}.role-card-front:before{content:"";position:absolute;inset:18px;border:1px solid var(--line);border-radius:24px}.role-card-face b{position:relative;font-size:clamp(36px,11vw,56px);line-height:1;letter-spacing:-.055em}.role-card-face small{position:relative;color:inherit;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;opacity:.78}.role-card-face em{position:relative;padding:8px 11px;border-radius:999px;background:#ffffff22;color:inherit;font-size:11px;font-style:normal;font-weight:900}.role-card-front small{color:var(--accent);opacity:1}.role-card-front em{background:#edf4ff;color:var(--accent)}.role-card-hint{padding:14px;border-radius:16px;background:var(--surface);font-size:13px}.secret-role-card+.button{margin-top:2px}
+.role-reveal-screen{justify-content:flex-start}.role-reveal-screen:before{display:none}.role-reveal-screen>h1{font-size:clamp(34px,10vw,50px);letter-spacing:0;margin-bottom:8px}.role-reveal-screen>p{margin-top:0}.secret-role-card{width:100%;height:315px;margin:18px 0;border:0;background:transparent;perspective:1200px;padding:0}.secret-role-card:disabled{cursor:default;opacity:1}.role-card-inner{position:relative;width:100%;height:100%;display:block;transition:transform .55s cubic-bezier(.2,.8,.2,1);transform-style:preserve-3d}.secret-role-card.revealed .role-card-inner{transform:rotateY(180deg)}.role-card-face{position:absolute;inset:0;display:grid;align-content:center;justify-items:center;gap:12px;padding:28px;border:1px solid #ffffff42;border-radius:30px;backface-visibility:hidden;box-shadow:0 24px 60px #14224a25;overflow:hidden}.role-card-back{overflow:hidden;background:radial-gradient(circle at 25% 20%,#ffffff28 0,#ffffff00 28%),linear-gradient(145deg,#15234f,#1769f6 55%,#ff756a);color:#fff}.role-card-back:before{content:"";position:absolute;inset:18px;border:1px solid #ffffff38;border-radius:24px}.role-card-back:after{content:"";position:absolute;width:190px;height:190px;right:-64px;bottom:-72px;border-radius:50%;background:#ffffff18}.role-card-front{background:linear-gradient(145deg,#fff,#f3f7ff);color:var(--ink);transform:rotateY(180deg)}.role-card-front:before{content:"";position:absolute;inset:18px;border:1px solid var(--line);border-radius:24px}.role-card-face b{position:relative;max-width:100%;font-size:clamp(26px,8vw,46px);line-height:1.06;letter-spacing:-.04em;text-align:center;overflow-wrap:anywhere;hyphens:auto}.role-card-face small{position:relative;color:inherit;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;opacity:.78}.role-card-face em{position:relative;padding:8px 11px;border-radius:999px;background:#ffffff22;color:inherit;font-size:11px;font-style:normal;font-weight:900}.role-card-front small{color:var(--accent);opacity:1}.role-card-front em{background:#edf4ff;color:var(--accent)}.role-card-hint{padding:14px;border-radius:16px;background:var(--surface);font-size:13px}.secret-role-card+.button{margin-top:2px}
 .bunker-art{background-image:linear-gradient(180deg,#1018201a,#10182066),url('./assets/ghp-game-bunker-hero-card.webp')}
 .game-thumb.bunker{background-image:url('./assets/ghp-game-bunker-hero-card.webp')}
 .game-thumb.truthdare{background-image:url('./assets/ghp-theme-party-card.webp')}
@@ -4230,9 +4250,11 @@ html[data-adblock-blocked] body {
 }
 
 .td-card > b {
-  font-size: clamp(30px, 9vw, 40px);
+  max-width: 100%;
+  font-size: clamp(26px, 8vw, 40px);
   line-height: 1.05;
   letter-spacing: -.04em;
+  overflow-wrap: anywhere;
 }
 
 .td-card > p {
@@ -4244,10 +4266,78 @@ html[data-adblock-blocked] body {
   line-height: 1.4;
 }
 
-.td-actions {
+/* Развилка хода: две карты повторяют палитру правды и действия,
+   поэтому выбор визуально предсказывает саму карточку. */
+.td-choice {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
+}
+
+.td-choice-card {
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  min-height: 168px;
+  padding: 20px 16px;
+  border: 0;
+  border-radius: 24px;
+  color: #fff;
+  text-align: center;
+  cursor: pointer;
+  transition: .2s transform, .2s box-shadow;
+  background: radial-gradient(circle at 18% 12%, #ffffff2e 0, transparent 34%), linear-gradient(150deg, #7b2e9e, #c2417c 58%, #ff7d59);
+  box-shadow: 0 18px 36px #4c103433;
+}
+
+.td-choice-card.td-dare {
+  background: radial-gradient(circle at 18% 12%, #ffffff2e 0, transparent 34%), linear-gradient(150deg, #b3341f, #e0642b 55%, #f3b13c);
+  box-shadow: 0 18px 36px #7c2c0e33;
+}
+
+.td-choice-card:active {
+  transform: scale(.97);
+}
+
+.td-choice-card b {
+  font-size: clamp(22px, 6.5vw, 28px);
+  letter-spacing: -.03em;
+}
+
+.td-choice-card small {
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.3;
+  opacity: .88;
+}
+
+.td-level {
+  justify-self: center;
+  margin-top: 2px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #ffffff26;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.td-refuse {
+  display: grid;
+  gap: 6px;
+  text-align: center;
+}
+
+.td-refuse small {
+  color: var(--soft);
+  font-size: 12px;
+}
+
+.td-finish .match-score,
+.td-finish .td-scoreboard {
+  margin-top: 12px;
 }
 
 .td-scoreboard {

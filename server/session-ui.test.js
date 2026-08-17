@@ -205,13 +205,25 @@ test('invite QR deep links open a working join modal on every landing', () => {
   assert.doesNotMatch(clientSource, /<JoinModal close=\{closeJoin\} onJoin=\{onJoin\}/);
 });
 
-test('discussion screen stays focused on timer and spy answer only', () => {
+test('discussion screen keeps the timer, the spy answer and the vote call', () => {
   assert.doesNotMatch(clientSource, /Первым задаёт вопрос/);
   assert.doesNotMatch(clientSource, /Показать мою карточку/);
   assert.doesNotMatch(clientSource, /Начать голосование за шпиона/);
-  assert.doesNotMatch(clientSource, /Предложить голосование/);
   assert.doesNotMatch(clientSource, /Завершить без результата/);
   assert.doesNotMatch(clientSource, /Завершить раунд без результата/);
+  const discussionSource = spySource.slice(
+    spySource.indexOf('function Discussion'),
+    spySource.indexOf('function GuessModal'),
+  );
+  assert.match(discussionSource, /ШПИОН!/);
+  assert.match(discussionSource, /request_vote/);
+});
+
+test('secret card flips back and forth after the first reveal', () => {
+  const shellSource = readFileSync('src/games/engine/GameShell.jsx', 'utf8');
+  const cardSource = shellSource.slice(shellSource.indexOf('function SecretCard'));
+  assert.match(cardSource, /setFaceDown\(\(current\) => !current\)/);
+  assert.doesNotMatch(cardSource, /disabled=/);
 });
 
 test('role reveal starts with a face-down card', () => {
