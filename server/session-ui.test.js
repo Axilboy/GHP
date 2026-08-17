@@ -12,7 +12,9 @@ const clientSourceFiles = [
   'src/shared/ui.jsx',
   'src/shared/Header.jsx',
   'src/shared/Landing.jsx',
+  'src/games/engine/GameShell.jsx',
   'src/games/spy/Spy.jsx',
+  'src/games/truthdare/TruthDare.jsx',
   'src/games/alias/Alias.jsx',
   'src/games/bunker/Bunker.jsx',
   'src/screens/Lobby.jsx',
@@ -90,12 +92,16 @@ test('admin players are registered-only and searchable', () => {
   assert.match(serverSource, /registeredProfiles/);
 });
 
-test('free rooms use Adsterra ad slots', () => {
+test('third-party Adsterra slots are opt-in and disabled in the default build', () => {
   assert.match(clientSource, /LobbyPlayerAdBanner/);
   assert.match(clientSource, /lobby_player_banner/);
   assert.match(clientSource, /spy_pre_round_interstitial/);
   assert.match(clientSource, /spy_between_rounds_interstitial/);
   assert.match(clientSource, /AdsterraBanner/);
+  assert.match(clientSource, /AdsterraSocialBar/);
+  assert.match(clientSource, /d74fd9fb9702fbaff65376cfa4eea0bd\.js/);
+  assert.match(clientSource, /VITE_ADSTERRA_ENABLED === 'true'/);
+  assert.match(clientSource, /ADSTERRA_ENABLED && <AdsterraBanner/);
   assert.match(clientSource, /doc\.write/);
   assert.match(clientSource, /adsterra-script-slot/);
   assert.doesNotMatch(clientSource, /srcDoc=\{adHtml\}/);

@@ -16,8 +16,6 @@ export const spyDefinition = {
   maxPlayers: 12,
   modes: [
     { id: 'classic', name: 'Классический', description: 'Один или несколько шпионов против мирных.' },
-    { id: 'quick', name: 'Быстрый', description: 'Пятиминутный раунд для короткой партии.' },
-    { id: 'duo', name: 'Два шпиона', description: 'Два шпиона знают друг друга.' },
   ],
   defaultSettings: { roundSeconds: 480, votingSeconds: 30, targetScore: 5, dictionaryIds: ['base'], subjectType: 'location', mode: 'classic', spyCount: 1, revealRoles: true, allowSpyGuess: true },
   settingsSchema: {
@@ -26,8 +24,8 @@ export const spyDefinition = {
     targetScore: { type: 'number', min: 3, max: 10 },
     dictionaryIds: { type: 'dictionary-list' },
     subjectType: { type: 'subject-type', values: ['location', 'item'] },
-    mode: { type: 'mode', values: ['classic', 'quick', 'duo'] },
-    spyCount: { type: 'number', min: 1, max: 3 },
+    mode: { type: 'mode', values: ['classic'] },
+    spyCount: { type: 'number', min: 1, max: 11 },
     revealRoles: { type: 'boolean' },
     allowSpyGuess: { type: 'boolean' },
   },
@@ -70,13 +68,13 @@ export function normalizeSpySettings(settings = {}) {
   const dictionaryIds = (Array.isArray(settings.dictionaryIds) ? settings.dictionaryIds : []).filter((id) => dictionaries.has(id) && dictionarySubject(dictionaries.get(id)) === subjectType);
   const requestedSpyCount = Number(settings.spyCount);
   return {
-    roundSeconds: mode === 'quick' ? 300 : spyDefinition.settingsSchema.roundSeconds.values.includes(seconds) ? seconds : spyDefinition.defaultSettings.roundSeconds,
+    roundSeconds: spyDefinition.settingsSchema.roundSeconds.values.includes(seconds) ? seconds : spyDefinition.defaultSettings.roundSeconds,
     votingSeconds: spyDefinition.settingsSchema.votingSeconds.values.includes(votingSeconds) ? votingSeconds : spyDefinition.defaultSettings.votingSeconds,
     targetScore: Math.min(10, Math.max(3, Number.isFinite(target) ? target : spyDefinition.defaultSettings.targetScore)),
     dictionaryIds: dictionaryIds.length ? dictionaryIds : [SUBJECT_DEFAULTS[subjectType]],
     subjectType,
     mode,
-    spyCount: mode === 'duo' ? 2 : Math.min(3, Math.max(1, Number.isFinite(requestedSpyCount) ? requestedSpyCount : 1)),
+    spyCount: Math.min(11, Math.max(1, Number.isFinite(requestedSpyCount) ? requestedSpyCount : 1)),
     revealRoles: settings.revealRoles !== false,
     allowSpyGuess: settings.allowSpyGuess !== false,
   };
@@ -91,7 +89,7 @@ export function createSpyRound(room, random = Math.random) {
   const location = locationPool[Math.floor(random() * locationPool.length)];
   const playerIds = room.players.map((player) => player.id);
   const shuffledPlayerIds = [...playerIds].sort(() => random() - 0.5);
-  const spyCount = Math.min(room.settings.spyCount || 1, Math.max(1, playerIds.length - 2));
+  const spyCount = Math.min(room.settings.spyCount || 1, Math.max(1, playerIds.length - 1));
   const spyIds = shuffledPlayerIds.slice(0, spyCount);
   const firstQuestionerId = playerIds[Math.floor(random() * playerIds.length)];
   const shuffledRoles = [...location.roles].sort(() => random() - 0.5);

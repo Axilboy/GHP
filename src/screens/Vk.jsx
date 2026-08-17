@@ -7,15 +7,15 @@ export function VkMiniAppPage({ navigate, vkLaunch }) {
     <Header navigate={navigate} right={<span className="badge">VK</span>} />
     <section className="legal-hero wrap">
       <span className="eyebrow">VK Mini Apps</span>
-      <h1>GameHubParty готовится к запуску во ВКонтакте</h1>
-      <p>Эта страница нужна для проверки мини-приложения, модерации и будущей отдельной сборки под VK.</p>
+      <h1>GameHubParty в VK Mini Apps</h1>
+      <p>Версия для VK использует те же комнаты, игровые сценарии и профили, что и основной сайт GameHubParty.</p>
     </section>
     <section className="section wrap">
-      <h2>Статус запуска</h2>
+      <h2>Как работает версия для VK</h2>
       <div className="vk-checks">
-        <article><b>HTTPS-домен</b><span>Для VK нужно указать адрес приложения, например vk.gamehubparty.ru.</span></article>
+        <article><b>Безопасное подключение</b><span>Мини-приложение открывает GameHubParty по защищённому HTTPS-соединению.</span></article>
         <article><b>Параметры VK</b><span>{summary ? `Пользователь: ${summary.userId || 'не передан'}, платформа: ${summary.platform || 'не передана'}` : 'Откройте страницу из VK, чтобы увидеть launch-параметры.'}</span></article>
-        <article><b>Проверка подписи</b><span>{summary?.verified ? 'Подпись проверена сервером.' : 'Подпись будет проверяться после добавления VK_APP_SECRET на сервер.'}</span></article>
+        <article><b>Проверка запуска</b><span>{summary?.verified ? 'Параметры запуска проверены сервером.' : 'Откройте страницу внутри VK, чтобы проверить параметры запуска.'}</span></article>
       </div>
     </section>
     <section className="section wrap">

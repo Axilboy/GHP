@@ -60,6 +60,7 @@ test('bunker settings reject unsupported durations', () => {
     revealMode: 'public_turns',
     contentPackId: 'space',
   });
+  assert.deepEqual(normalizeBunkerSettings({ contentPackId: 'harry_potter' }).contentPackId, 'harry_potter');
 });
 
 test('bunker catalog keeps classic free and premium expansion packs', () => {
@@ -71,6 +72,10 @@ test('bunker catalog keeps classic free and premium expansion packs', () => {
   assert.ok(premiumIds.includes('party18'));
   assert.ok(premiumIds.includes('corporate'));
   assert.ok(premiumIds.includes('space'));
+  assert.ok(premiumIds.includes('harry_potter'));
+  assert.ok(premiumIds.includes('lotr'));
+  assert.ok(premiumIds.includes('retro_movies'));
+  assert.ok(premiumIds.includes('video_games'));
 });
 
 test('public reveal mode exposes only selected fields', () => {

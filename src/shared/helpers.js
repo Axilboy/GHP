@@ -2,7 +2,8 @@ import { getPlayerId } from '../identity';
 import { localStore, sessionStore } from '../browserStorage';
 import { getSubscriptionStatus } from '../profileStatus';
 import { isVkRuntime } from '../vk';
-import { reachMetrikaGoal, trackMetrikaPageView } from '../yandexMetrika';
+import { getMetrikaAttribution, reachMetrikaGoal, trackMetrikaPageView } from '../yandexMetrika';
+import { trackOpenPanelEvent } from '../openPanel';
 
 export function formatTime(milliseconds) {
   const seconds = Math.max(0, Math.ceil(milliseconds / 1000));
@@ -17,6 +18,20 @@ export function hasRoomContentAccess(profile, gameId) {
   const subscription = getSubscriptionStatus(profile);
   const partyPass = profile?.partyPasses?.some((pass) => pass.activeUntil > Date.now());
   return subscription.active || partyPass || hasGamePass(profile, gameId);
+}
+
+export function hasThemePass(profile, themeId) {
+  const id = String(themeId || '').trim();
+  return profile?.themePasses?.some((pass) => pass.themeId === id && pass.activeUntil > Date.now()) || false;
+}
+
+export function hasAnyThemePass(profile, themeIds = []) {
+  const ids = Array.isArray(themeIds) ? themeIds : [];
+  return ids.some((id) => hasThemePass(profile, id));
+}
+
+export function hasThemedContentAccess(profile, gameId, item = {}) {
+  return Boolean(item.free || item.tier === 'free' || hasRoomContentAccess(profile, gameId) || hasAnyThemePass(profile, item.themeIds));
 }
 
 export function isVkHost() {
@@ -41,8 +56,25 @@ export function analyticsSessionId() {
   }
 }
 
+export function shouldTrackReturnVisit(now = Date.now()) {
+  const sessionKey = 'gamehubparty_return_visit_tracked';
+  const lastVisitKey = 'gamehubparty_last_visit_at';
+  if (sessionStore.getItem(sessionKey)) return false;
+  sessionStore.setItem(sessionKey, '1');
+  const previousVisit = Number(localStore.getItem(lastVisitKey) || 0);
+  localStore.setItem(lastVisitKey, String(now));
+  return previousVisit > 0 && now - previousVisit >= 30 * 60 * 1000;
+}
+
+export async function hashAnalyticsRoomId(roomId) {
+  const value = String(roomId || '').trim();
+  if (!value || !globalThis.crypto?.subtle || typeof TextEncoder === 'undefined') return '';
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(`gamehubparty-room-v1:${value}`));
+  return [...new Uint8Array(digest)].slice(0, 12).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
 export function trackClientEvent(name, details = {}) {
-  const params = new URLSearchParams(location.search);
+  const attribution = getMetrikaAttribution();
   const payload = {
     name,
     details: {
@@ -51,9 +83,11 @@ export function trackClientEvent(name, details = {}) {
       playerId: getPlayerId(),
       sessionId: analyticsSessionId(),
       referrer: document.referrer,
-      source: params.get('utm_source') || '',
-      medium: params.get('utm_medium') || '',
-      campaign: params.get('utm_campaign') || '',
+      source: attribution.utm_source || '',
+      medium: attribution.utm_medium || '',
+      campaign: attribution.utm_campaign || '',
+      content: attribution.utm_content || '',
+      term: attribution.utm_term || '',
       ...details,
     },
   };
@@ -63,8 +97,9 @@ export function trackClientEvent(name, details = {}) {
     body: JSON.stringify(payload),
     keepalive: true,
   }).catch(() => {});
+  trackOpenPanelEvent(name, payload.details);
   if (name === 'page_view') trackMetrikaPageView(details.page);
-  else reachMetrikaGoal(name, details);
+  else reachMetrikaGoal(name, { ...attribution, ...details });
 }
 
 export const SESSION_GRACE_MS = 5 * 60 * 1000;
@@ -159,6 +194,16 @@ export function profileAccessList(profile) {
       note: 'Расширения и отключение рекламы только в этой игре.',
     });
   }
+  for (const pass of profile?.themePasses || []) {
+    if (pass.activeUntil <= now) continue;
+    items.push({
+      id: pass.id || pass.productId,
+      title: pass.name || 'Тематический пропуск',
+      label: 'Тематические наборы',
+      until: pass.activeUntil,
+      note: 'Открывает связанные тематические наборы в играх на срок пропуска.',
+    });
+  }
   for (const pass of profile?.partyPasses || []) {
     if (pass.activeUntil <= now) continue;
     items.push({
@@ -176,4 +221,8 @@ export function hasTimedGameAccess(profile, gameId) {
   const subscriptionActive = Number(profile?.subscription?.activeUntil || 0) > Date.now();
   const partyPassActive = profile?.partyPasses?.some((pass) => pass.activeUntil > Date.now());
   return Boolean(profile?.pro || profile?.proPlus || subscriptionActive || partyPassActive || hasGamePass(profile, gameId));
+}
+
+export function hasProAccess(profile) {
+  return Boolean(profile?.pro || profile?.proPlus || Number(profile?.subscription?.activeUntil || 0) > Date.now());
 }

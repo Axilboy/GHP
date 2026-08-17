@@ -106,7 +106,7 @@ export const spyClassicScenario = {
       await players[0].request('activate_demo_plan', { plan: 'pro', months: 1 });
       const room = await players[0].createRoom();
       await Promise.all(players.slice(1).map((player) => player.joinRoom(room.code)));
-      await players[0].act('update_settings', { settings: { mode: 'duo' } });
+      await players[0].act('update_settings', { settings: { spyCount: 2 } });
       await Promise.all(players.slice(1).map((player) => player.act('set_ready', { ready: true })));
       await players[0].act('start_round');
       const cards = await Promise.all(players.map((player) => player.revealRole()));

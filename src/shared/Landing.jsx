@@ -1,4 +1,4 @@
-import { hasTimedGameAccess } from './helpers';
+import { hasProAccess, hasTimedGameAccess } from './helpers';
 
 export function GameFunnelStrip({ game = 'home', navigate }) {
   const copy = {
@@ -36,6 +36,15 @@ export function GameFunnelStrip({ game = 'home', navigate }) {
         ['1', 'Карточка игрока', 'Каждый видит свои факты и решает, что раскрыть.'],
         ['2', 'Спор вслух', 'Сайт показывает цель, бункер и время.'],
         ['3', 'Сценарии', 'Новые катастрофы и паки дают повод сыграть ещё.'],
+      ],
+    },
+    truthdare: {
+      eyebrow: 'Как играется',
+      title: 'Карточки для разговоров и маленьких вызовов',
+      items: [
+        ['Игрок на экране', 'Телефон сам выбирает, кому достанется следующая карточка.'],
+        ['Правда или действие', 'Вопросы открывают истории, действия добавляют темп и смешные моменты.'],
+        ['Без ведущего', 'Достаточно нажать “Выполнено” или “Следующий”, и ход перейдёт дальше.'],
       ],
     },
   }[game];
@@ -76,35 +85,49 @@ export function LandingPlaybook({ game = 'spy' }) {
         ['Совет решает', 'После обсуждения компания голосует, кто остаётся снаружи.'],
       ],
     },
+    truthdare: {
+      eyebrow: 'Как играется',
+      title: 'Карточки для разговоров и маленьких вызовов',
+      items: [
+        ['Игрок на экране', 'Телефон сам выбирает, кому достанется следующая карточка.'],
+        ['Правда или действие', 'Вопросы открывают истории, действия добавляют темп и смешные моменты.'],
+        ['Без ведущего', 'Достаточно нажать “Выполнено” или “Следующий”, и ход перейдёт дальше.'],
+      ],
+    },
   }[game];
   return <section className="landing-section landing-playbook wrap"><span className="eyebrow">{copy.eyebrow}</span><h2>{copy.title}</h2><div>{copy.items.map(([title, text]) => <article key={title}><b>{title}</b><span>{text}</span></article>)}</div></section>;
 }
 
 export function LandingAccessShowcase({ game = 'spy', navigate, profile }) {
-  const gameNames = { home: 'все игры', spy: 'Шпиона', alias: 'Alias', bunker: 'Бункер' };
-  const passNames = { home: 'PRO', spy: 'Spy Pass', alias: 'Alias Pass', bunker: 'Bunker Pass' };
-  const hasAccess = game === 'home' ? hasTimedGameAccess(profile, 'spy') && hasTimedGameAccess(profile, 'alias') && hasTimedGameAccess(profile, 'bunker') : hasTimedGameAccess(profile, game);
+  const gameNames = { home: 'всех игр', spy: 'Шпиона', alias: 'Alias', bunker: 'Бункера', truthdare: 'Правды или действия' };
+  const passNames = { home: 'WeekendPass', spy: 'Spy Pass', alias: 'Alias Pass', bunker: 'Bunker Pass', truthdare: 'PRO' };
+  const hasAccess = game === 'truthdare' ? hasProAccess(profile) : game === 'home' ? hasTimedGameAccess(profile, 'spy') && hasTimedGameAccess(profile, 'alias') && hasTimedGameAccess(profile, 'bunker') : hasTimedGameAccess(profile, game);
   const cards = {
     home: [
-      ['cover-city', 'Больше сценариев', 'Дополнительные наборы для разных компаний.'],
-      ['cover-after_dark', 'Комнаты без рекламы', 'Активный доступ хоста убирает паузы у всех.'],
-      ['cover-party', 'Один профиль', 'Покупки и сроки доступа остаются в профиле.'],
+      ['Больше сценариев', 'Дополнительные наборы для разных компаний.'],
+      ['Комнаты без рекламы', 'Активный доступ хоста убирает паузы у всех.'],
+      ['Один профиль', 'Покупки и сроки доступа остаются в профиле.'],
     ],
     spy: [
-      ['cover-city', 'Полная библиотека', 'Локации, предметы и тематические наборы.'],
-      ['cover-drinks', 'Режимы для компании', 'Два шпиона, быстрые раунды и больше поводов спорить.'],
-      ['cover-memes', 'Свои локации', 'Добавляйте места под вашу компанию.'],
+      ['Полная библиотека', 'Локации, предметы и тематические наборы.'],
+      ['Гибкая партия', 'Настройте время, голосование и количество шпионов под свою компанию.'],
+      ['Свои локации', 'Добавляйте места под вашу компанию.'],
     ],
     alias: [
-      ['cover-party', 'Словари под вечер', 'Домашние, офисные и вечериночные темы.'],
-      ['cover-pop', 'Больше темпа', 'Новые наборы быстро освежают повторные партии.'],
-      ['cover-office_party', 'Для хоста', 'Одна покупка открывает комнату без рекламы.'],
+      ['Словари под вечер', 'Домашние, офисные и вечериночные темы.'],
+      ['Больше темпа', 'Новые наборы быстро освежают повторные партии.'],
+      ['Для хоста', 'Одна покупка открывает комнату без рекламы.'],
     ],
     bunker: [
-      ['cover-secret', 'Новые катастрофы', 'Медицинские, космические и суровые сценарии.'],
-      ['cover-fantasy', 'Больше ролей', 'Спецкарты и цели, которые меняют аргументы игроков.'],
-      ['cover-after_dark', 'Без рекламных пауз', 'Game Pass этой игры убирает рекламу в комнате.'],
+      ['Новые катастрофы', 'Медицинские, космические и суровые сценарии.'],
+      ['Больше ролей', 'Спецкарты и цели, которые меняют аргументы игроков.'],
+      ['Без рекламных пауз', 'Game Pass этой игры убирает рекламу в комнате.'],
+    ],
+    truthdare: [
+      ['Больше карточек', 'Колоды под домашний вечер, вечеринку и смелую компанию.'],
+      ['Темы под настроение', 'Можно держать игру мягкой или сделать задания острее.'],
+      ['Полный доступ', 'PRO открывает все колоды и позволяет запускать комнаты для компании.'],
     ],
   }[game];
-  return <section className="landing-section landing-access wrap"><div className="landing-access-head"><span className="eyebrow">Что откроется</span><h2>{passNames[game]} или PRO для {gameNames[game]}</h2><p>{hasAccess ? 'Доступ уже активен. Можно сразу создавать комнату и пользоваться расширениями.' : 'Начните бесплатно, а когда компания втянется — откройте расширения и уберите рекламу в комнате.'}</p></div><div className="landing-access-grid">{cards.map(([cover, title, text]) => <article key={title}><div className={`cover mini ${cover}`} /><b>{title}</b><span>{text}</span></article>)}</div><button className="button secondary full" onClick={() => navigate('store')}>{hasAccess ? 'Посмотреть мои доступы' : 'Открыть магазин'}</button></section>;
+  return <section className="landing-section landing-access wrap"><div className="landing-access-head"><span className="eyebrow">Что откроется</span><h2>{game === 'truthdare' ? `PRO для ${gameNames[game]}` : `${passNames[game]} или PRO для ${gameNames[game]}`}</h2><p>{hasAccess ? 'Доступ уже активен. Можно сразу создавать комнату и пользоваться расширениями.' : game === 'truthdare' ? 'PRO открывает создание комнат и все колоды для этой игры.' : 'Начните бесплатно, а когда компания втянется — откройте расширения и уберите рекламу в комнате.'}</p></div><div className="landing-access-grid landing-access-plain">{cards.map(([title, text]) => <article key={title}><b>{title}</b><span>{text}</span></article>)}</div><button className="button secondary full" onClick={() => navigate('store')}>{hasAccess ? 'Посмотреть мои доступы' : 'Открыть магазин'}</button></section>;
 }

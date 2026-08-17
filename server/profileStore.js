@@ -1,10 +1,13 @@
+import { getThemePass, themePassPriceMap, themePassTitleMap } from './games/thematicPasses.js';
+
 const profiles = new Map();
 
 const productPrices = {
-  dictionary: { city: 99, travel: 149, secret: 149, pop: 129, fantasy: 149, after_dark: 179, couples: 149, drinks: 149, office_party: 129, memes: 129, items_gadgets: 129, items_couples: 149, items_after_dark: 179, items_weird: 129, items_alcohol: 179, items_computer_games: 149 },
-  bundle: { starter: 199, adventure: 249, party_pack: 349, items_pack: 499, all_spy: 1099 },
+  dictionary: { city: 99, travel: 149, secret: 149, pop: 129, fantasy: 149, harry_potter: 149, lotr: 149, retro_movies: 129, video_games: 149, party_house: 129, after_dark: 179, couples: 149, drinks: 149, office_party: 129, memes: 129, items_gadgets: 129, items_couples: 149, items_after_dark: 179, items_weird: 129, items_alcohol: 179, items_computer_games: 149 },
+  bundle: { starter: 199, adventure: 249, party_pack: 349, fandom_pack: 399, items_pack: 499, all_spy: 1099 },
   subscription: { pro: 299 },
   game_pass: { spy_pass: 99, alias_pass: 99, bunker_pass: 99 },
+  theme_pass: themePassPriceMap(),
   custom_dictionary: { custom_dictionary: 199 },
   party_pass: { party_pass_24h: 149 },
   theme: { partyhub: 149 },
@@ -16,6 +19,11 @@ const productTitles = {
   secret: 'Совершенно секретно',
   pop: 'Кино и поп-культура',
   fantasy: 'Магия и легенды',
+  harry_potter: 'Гарри Поттер',
+  lotr: 'Властелин колец',
+  retro_movies: 'Ретро-кино',
+  video_games: 'Видеоигры',
+  party_house: 'Домашняя вечеринка',
   after_dark: '18+ После полуночи',
   couples: 'Для влюбленных',
   drinks: 'Пьянка и бар',
@@ -30,6 +38,7 @@ const productTitles = {
   starter: 'Стартовый пак',
   adventure: 'Пак приключений',
   party_pack: 'Пак для вечеринки',
+  fandom_pack: 'Фан-пак Шпиона',
   items_pack: 'Предметы Шпиона',
   all_spy: 'Архив Шпиона 2026',
   pro: 'PRO на месяц',
@@ -37,6 +46,7 @@ const productTitles = {
   spy_pass: 'Spy Pass на месяц',
   alias_pass: 'Alias Pass на месяц',
   bunker_pass: 'Bunker Pass на месяц',
+  ...themePassTitleMap(),
   custom_dictionary: 'Конструктор словарей',
   party_pass_24h: 'WeekendPass на 24 часа',
   partyhub: 'Тема PartyHub',
@@ -51,9 +61,10 @@ const gamePassGameIds = {
 const bundleDictionaryIds = {
   starter: ['city', 'travel'],
   adventure: ['secret', 'fantasy'],
-  party_pack: ['after_dark', 'couples', 'drinks'],
+  party_pack: ['party_house', 'after_dark', 'couples', 'drinks'],
+  fandom_pack: ['harry_potter', 'lotr', 'retro_movies', 'video_games'],
   items_pack: ['items_gadgets', 'items_couples', 'items_after_dark', 'items_weird', 'items_alcohol', 'items_computer_games'],
-  all_spy: ['city', 'travel', 'secret', 'pop', 'fantasy', 'after_dark', 'couples', 'drinks', 'office_party', 'memes', 'items_gadgets', 'items_couples', 'items_after_dark', 'items_weird', 'items_alcohol', 'items_computer_games'],
+  all_spy: ['city', 'travel', 'secret', 'pop', 'fantasy', 'harry_potter', 'lotr', 'retro_movies', 'video_games', 'party_house', 'after_dark', 'couples', 'drinks', 'office_party', 'memes', 'items_gadgets', 'items_couples', 'items_after_dark', 'items_weird', 'items_alcohol', 'items_computer_games'],
 };
 
 function newTasks() {
@@ -64,7 +75,7 @@ function newTasks() {
 }
 
 function cleanProductType(type) {
-  if (['dictionary', 'bundle', 'subscription', 'game_pass', 'custom_dictionary', 'party_pass', 'theme'].includes(type)) return type;
+  if (['dictionary', 'bundle', 'subscription', 'game_pass', 'theme_pass', 'custom_dictionary', 'party_pass', 'theme'].includes(type)) return type;
   throw new Error('Неизвестный тип товара');
 }
 
@@ -92,6 +103,7 @@ function migrate(profile) {
   profile.proPlus ??= false;
   profile.subscription ??= null;
   profile.gamePasses ??= [];
+  profile.themePasses ??= [];
   profile.partyPasses ??= [];
   profile.customLocations ??= [];
   profile.customDictionaryOwned ??= false;
@@ -120,6 +132,7 @@ export function getOrCreateProfile(playerId, name = 'Гость') {
       proPlus: false,
       subscription: null,
       gamePasses: [],
+      themePasses: [],
       partyPasses: [],
       ownedDictionaryIds: ['base'],
       customDictionaryOwned: false,
@@ -154,6 +167,19 @@ export function hasActiveGamePass(profile, gameId, now = Date.now()) {
   return data.gamePasses?.some((pass) => pass.gameId === safeGameId && pass.activeUntil > now) || false;
 }
 
+export function hasActiveThemePass(profile, themeId, now = Date.now()) {
+  const data = migrate(profile);
+  const safeThemeId = String(themeId || '').trim();
+  return data.themePasses?.some((pass) => pass.themeId === safeThemeId && pass.activeUntil > now) || false;
+}
+
+export function hasAnyThemePass(profile, themeIds = [], now = Date.now()) {
+  const data = migrate(profile);
+  const ids = Array.isArray(themeIds) ? themeIds.map((id) => String(id || '').trim()).filter(Boolean) : [];
+  if (!ids.length) return false;
+  return data.themePasses?.some((pass) => ids.includes(pass.themeId) && pass.activeUntil > now) || false;
+}
+
 export function hasTimedGameAccess(profile, gameId, now = Date.now()) {
   const data = migrate(profile);
   const activeSubscription = data.subscription?.activeUntil > now;
@@ -179,7 +205,7 @@ export function createOrder(playerId, input = {}) {
   const profile = getOrCreateProfile(playerId);
   const type = cleanProductType(input.type);
   const productId = cleanProductId(type, input.productId);
-  const months = ['subscription', 'game_pass'].includes(type) ? Math.min(12, Math.max(1, Number(input.months) || 1)) : null;
+  const months = ['subscription', 'game_pass', 'theme_pass'].includes(type) ? Math.min(12, Math.max(1, Number(input.months) || 1)) : null;
   const basePrice = productPrices[type][productId];
   const amountRub = orderAmountRub(type, productId, months, basePrice);
   const order = {
@@ -249,6 +275,7 @@ export function confirmPaidOrder(playerId, orderId, provider = 'demo', paymentId
   if (order.type === 'bundle') applyBundle(profile, order.productId);
   if (order.type === 'subscription') applyPlan(profile, order.productId, order.months || 1);
   if (order.type === 'game_pass') applyGamePass(profile, order.productId, order.months || 1);
+  if (order.type === 'theme_pass') applyThemePass(profile, order.productId, order.months || 1);
   if (order.type === 'custom_dictionary') profile.customDictionaryOwned = true;
   if (order.type === 'party_pass') applyPartyPass(profile, 24);
   if (order.type === 'theme') unlockTheme(profile, order.productId);
@@ -263,7 +290,7 @@ export function confirmPaidOrder(playerId, orderId, provider = 'demo', paymentId
     provider: order.provider || 'demo',
     paymentId: order.paymentId || null,
     createdAt: Date.now(),
-    activeUntil: order.type === 'subscription' ? profile.subscription?.activeUntil : order.type === 'game_pass' ? profile.gamePasses?.find((pass) => pass.productId === order.productId)?.activeUntil : order.type === 'party_pass' ? profile.partyPasses[0]?.activeUntil : null,
+    activeUntil: purchaseActiveUntil(profile, order),
   });
   profile.purchases = profile.purchases.slice(0, 30);
   profile.updatedAt = Date.now();
@@ -304,6 +331,17 @@ function applyGamePass(profile, productId, months = 1) {
   ].slice(0, 10);
 }
 
+function applyThemePass(profile, productId, months = 1) {
+  const safeMonths = Math.min(12, Math.max(1, Number(months) || 1));
+  const pass = getThemePass(productId);
+  if (!pass) throw new Error('Тематический пропуск не найден');
+  const activeUntil = Date.now() + safeMonths * 30 * 24 * 60 * 60 * 1000;
+  profile.themePasses = [
+    { id: `theme-pass-${Date.now()}`, productId, themeId: pass.themeId, name: pass.name, months: safeMonths, activeUntil },
+    ...(profile.themePasses || []).filter((item) => item.themeId !== pass.themeId),
+  ].slice(0, 12);
+}
+
 function applyPartyPass(profile, hours = 24) {
   const safeHours = Math.min(72, Math.max(3, Number(hours) || 24));
   profile.partyPasses.unshift({ id: `party-${Date.now()}`, activeUntil: Date.now() + safeHours * 60 * 60 * 1000 });
@@ -312,6 +350,14 @@ function applyPartyPass(profile, hours = 24) {
 
 function unlockTheme(profile, themeId) {
   profile.ownedThemeIds = [...new Set([...(profile.ownedThemeIds || ['ghp']), 'ghp', themeId])];
+}
+
+function purchaseActiveUntil(profile, order) {
+  if (order.type === 'subscription') return profile.subscription?.activeUntil || null;
+  if (order.type === 'game_pass') return profile.gamePasses?.find((pass) => pass.productId === order.productId)?.activeUntil || null;
+  if (order.type === 'theme_pass') return profile.themePasses?.find((pass) => pass.productId === order.productId)?.activeUntil || null;
+  if (order.type === 'party_pass') return profile.partyPasses[0]?.activeUntil || null;
+  return null;
 }
 
 export function unlockDemoDictionary(playerId, dictionary) {
@@ -398,6 +444,11 @@ export function adminGrantAccess(playerId, input = {}) {
     applyGamePass(profile, productId, months);
     activeUntil = profile.gamePasses?.find((pass) => pass.productId === productId)?.activeUntil || null;
   }
+  if (type === 'theme_pass') {
+    const months = Math.min(12, Math.max(1, Number(input.months) || 1));
+    applyThemePass(profile, productId, months);
+    activeUntil = profile.themePasses?.find((pass) => pass.productId === productId)?.activeUntil || null;
+  }
   if (type === 'custom_dictionary') profile.customDictionaryOwned = true;
   if (type === 'party_pass') {
     const hours = Math.min(72, Math.max(3, Number(input.hours) || 24));
@@ -431,6 +482,10 @@ export function adminRevokeAccess(playerId, input = {}) {
   if (type === 'game_pass') {
     const gameId = gamePassGameIds[productId];
     profile.gamePasses = (profile.gamePasses || []).filter((pass) => pass.gameId !== gameId);
+  }
+  if (type === 'theme_pass') {
+    const pass = getThemePass(productId);
+    profile.themePasses = (profile.themePasses || []).filter((item) => item.themeId !== pass?.themeId);
   }
   if (type === 'custom_dictionary') profile.customDictionaryOwned = false;
   if (type === 'party_pass') profile.partyPasses = [];

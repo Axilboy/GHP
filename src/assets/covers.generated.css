@@ -1,0 +1,263 @@
+/* СГЕНЕРИРОВАНО tools/gen-image-derivatives.mjs — не редактировать вручную. */
+.cover-base{background-image:url("./ghp-theme-base-card.webp")}
+.cover-base{background-image:image-set(url("./ghp-theme-base-card.avif") type("image/avif"),url("./ghp-theme-base-card.webp") type("image/webp"))}
+.store-card-thumb.cover-base{background-image:url("./ghp-theme-base-thumb.webp")}
+.store-card-thumb.cover-base{background-image:image-set(url("./ghp-theme-base-thumb.avif") type("image/avif"),url("./ghp-theme-base-thumb.webp") type("image/webp"))}
+.game-thumb.base{background-image:url("./ghp-theme-base-card.webp")}
+.game-thumb.base{background-image:image-set(url("./ghp-theme-base-card.avif") type("image/avif"),url("./ghp-theme-base-card.webp") type("image/webp"))}
+.cover-city{background-image:url("./ghp-theme-city-card.webp")}
+.cover-city{background-image:image-set(url("./ghp-theme-city-card.avif") type("image/avif"),url("./ghp-theme-city-card.webp") type("image/webp"))}
+.store-card-thumb.cover-city{background-image:url("./ghp-theme-city-thumb.webp")}
+.store-card-thumb.cover-city{background-image:image-set(url("./ghp-theme-city-thumb.avif") type("image/avif"),url("./ghp-theme-city-thumb.webp") type("image/webp"))}
+.game-thumb.city{background-image:url("./ghp-theme-city-card.webp")}
+.game-thumb.city{background-image:image-set(url("./ghp-theme-city-card.avif") type("image/avif"),url("./ghp-theme-city-card.webp") type("image/webp"))}
+.cover-travel{background-image:url("./ghp-theme-travel-card.webp")}
+.cover-travel{background-image:image-set(url("./ghp-theme-travel-card.avif") type("image/avif"),url("./ghp-theme-travel-card.webp") type("image/webp"))}
+.store-card-thumb.cover-travel{background-image:url("./ghp-theme-travel-thumb.webp")}
+.store-card-thumb.cover-travel{background-image:image-set(url("./ghp-theme-travel-thumb.avif") type("image/avif"),url("./ghp-theme-travel-thumb.webp") type("image/webp"))}
+.game-thumb.travel{background-image:url("./ghp-theme-travel-card.webp")}
+.game-thumb.travel{background-image:image-set(url("./ghp-theme-travel-card.avif") type("image/avif"),url("./ghp-theme-travel-card.webp") type("image/webp"))}
+.cover-secret{background-image:url("./ghp-theme-secret-card.webp")}
+.cover-secret{background-image:image-set(url("./ghp-theme-secret-card.avif") type("image/avif"),url("./ghp-theme-secret-card.webp") type("image/webp"))}
+.store-card-thumb.cover-secret{background-image:url("./ghp-theme-secret-thumb.webp")}
+.store-card-thumb.cover-secret{background-image:image-set(url("./ghp-theme-secret-thumb.avif") type("image/avif"),url("./ghp-theme-secret-thumb.webp") type("image/webp"))}
+.game-thumb.secret{background-image:url("./ghp-theme-secret-card.webp")}
+.game-thumb.secret{background-image:image-set(url("./ghp-theme-secret-card.avif") type("image/avif"),url("./ghp-theme-secret-card.webp") type("image/webp"))}
+.cover-pop{background-image:url("./ghp-theme-pop-card.webp")}
+.cover-pop{background-image:image-set(url("./ghp-theme-pop-card.avif") type("image/avif"),url("./ghp-theme-pop-card.webp") type("image/webp"))}
+.store-card-thumb.cover-pop{background-image:url("./ghp-theme-pop-thumb.webp")}
+.store-card-thumb.cover-pop{background-image:image-set(url("./ghp-theme-pop-thumb.avif") type("image/avif"),url("./ghp-theme-pop-thumb.webp") type("image/webp"))}
+.game-thumb.pop{background-image:url("./ghp-theme-pop-card.webp")}
+.game-thumb.pop{background-image:image-set(url("./ghp-theme-pop-card.avif") type("image/avif"),url("./ghp-theme-pop-card.webp") type("image/webp"))}
+.cover-movies{background-image:url("./ghp-theme-movies-card.webp")}
+.cover-movies{background-image:image-set(url("./ghp-theme-movies-card.avif") type("image/avif"),url("./ghp-theme-movies-card.webp") type("image/webp"))}
+.store-card-thumb.cover-movies{background-image:url("./ghp-theme-movies-thumb.webp")}
+.store-card-thumb.cover-movies{background-image:image-set(url("./ghp-theme-movies-thumb.avif") type("image/avif"),url("./ghp-theme-movies-thumb.webp") type("image/webp"))}
+.game-thumb.movies{background-image:url("./ghp-theme-movies-card.webp")}
+.game-thumb.movies{background-image:image-set(url("./ghp-theme-movies-card.avif") type("image/avif"),url("./ghp-theme-movies-card.webp") type("image/webp"))}
+.cover-fantasy{background-image:url("./ghp-theme-fantasy-card.webp")}
+.cover-fantasy{background-image:image-set(url("./ghp-theme-fantasy-card.avif") type("image/avif"),url("./ghp-theme-fantasy-card.webp") type("image/webp"))}
+.store-card-thumb.cover-fantasy{background-image:url("./ghp-theme-fantasy-thumb.webp")}
+.store-card-thumb.cover-fantasy{background-image:image-set(url("./ghp-theme-fantasy-thumb.avif") type("image/avif"),url("./ghp-theme-fantasy-thumb.webp") type("image/webp"))}
+.game-thumb.fantasy{background-image:url("./ghp-theme-fantasy-card.webp")}
+.game-thumb.fantasy{background-image:image-set(url("./ghp-theme-fantasy-card.avif") type("image/avif"),url("./ghp-theme-fantasy-card.webp") type("image/webp"))}
+.cover-harry_potter{background-image:url("./ghp-theme-harry-potter-card.webp")}
+.cover-harry_potter{background-image:image-set(url("./ghp-theme-harry-potter-card.avif") type("image/avif"),url("./ghp-theme-harry-potter-card.webp") type("image/webp"))}
+.store-card-thumb.cover-harry_potter{background-image:url("./ghp-theme-harry-potter-thumb.webp")}
+.store-card-thumb.cover-harry_potter{background-image:image-set(url("./ghp-theme-harry-potter-thumb.avif") type("image/avif"),url("./ghp-theme-harry-potter-thumb.webp") type("image/webp"))}
+.game-thumb.harry_potter{background-image:url("./ghp-theme-harry-potter-card.webp")}
+.game-thumb.harry_potter{background-image:image-set(url("./ghp-theme-harry-potter-card.avif") type("image/avif"),url("./ghp-theme-harry-potter-card.webp") type("image/webp"))}
+.cover-lotr{background-image:url("./ghp-theme-lotr-card.webp")}
+.cover-lotr{background-image:image-set(url("./ghp-theme-lotr-card.avif") type("image/avif"),url("./ghp-theme-lotr-card.webp") type("image/webp"))}
+.store-card-thumb.cover-lotr{background-image:url("./ghp-theme-lotr-thumb.webp")}
+.store-card-thumb.cover-lotr{background-image:image-set(url("./ghp-theme-lotr-thumb.avif") type("image/avif"),url("./ghp-theme-lotr-thumb.webp") type("image/webp"))}
+.game-thumb.lotr{background-image:url("./ghp-theme-lotr-card.webp")}
+.game-thumb.lotr{background-image:image-set(url("./ghp-theme-lotr-card.avif") type("image/avif"),url("./ghp-theme-lotr-card.webp") type("image/webp"))}
+.cover-retro_movies{background-image:url("./ghp-theme-retro-movies-card.webp")}
+.cover-retro_movies{background-image:image-set(url("./ghp-theme-retro-movies-card.avif") type("image/avif"),url("./ghp-theme-retro-movies-card.webp") type("image/webp"))}
+.store-card-thumb.cover-retro_movies{background-image:url("./ghp-theme-retro-movies-thumb.webp")}
+.store-card-thumb.cover-retro_movies{background-image:image-set(url("./ghp-theme-retro-movies-thumb.avif") type("image/avif"),url("./ghp-theme-retro-movies-thumb.webp") type("image/webp"))}
+.game-thumb.retro_movies{background-image:url("./ghp-theme-retro-movies-card.webp")}
+.game-thumb.retro_movies{background-image:image-set(url("./ghp-theme-retro-movies-card.avif") type("image/avif"),url("./ghp-theme-retro-movies-card.webp") type("image/webp"))}
+.cover-video_games{background-image:url("./ghp-theme-video-games-card.webp")}
+.cover-video_games{background-image:image-set(url("./ghp-theme-video-games-card.avif") type("image/avif"),url("./ghp-theme-video-games-card.webp") type("image/webp"))}
+.store-card-thumb.cover-video_games{background-image:url("./ghp-theme-video-games-thumb.webp")}
+.store-card-thumb.cover-video_games{background-image:image-set(url("./ghp-theme-video-games-thumb.avif") type("image/avif"),url("./ghp-theme-video-games-thumb.webp") type("image/webp"))}
+.game-thumb.video_games{background-image:url("./ghp-theme-video-games-card.webp")}
+.game-thumb.video_games{background-image:image-set(url("./ghp-theme-video-games-card.avif") type("image/avif"),url("./ghp-theme-video-games-card.webp") type("image/webp"))}
+.cover-memes{background-image:url("./ghp-theme-memes-card.webp")}
+.cover-memes{background-image:image-set(url("./ghp-theme-memes-card.avif") type("image/avif"),url("./ghp-theme-memes-card.webp") type("image/webp"))}
+.store-card-thumb.cover-memes{background-image:url("./ghp-theme-memes-thumb.webp")}
+.store-card-thumb.cover-memes{background-image:image-set(url("./ghp-theme-memes-thumb.avif") type("image/avif"),url("./ghp-theme-memes-thumb.webp") type("image/webp"))}
+.game-thumb.memes{background-image:url("./ghp-theme-memes-card.webp")}
+.game-thumb.memes{background-image:image-set(url("./ghp-theme-memes-card.avif") type("image/avif"),url("./ghp-theme-memes-card.webp") type("image/webp"))}
+.cover-fandom{background-image:url("./ghp-theme-fandom-card.webp")}
+.cover-fandom{background-image:image-set(url("./ghp-theme-fandom-card.avif") type("image/avif"),url("./ghp-theme-fandom-card.webp") type("image/webp"))}
+.store-card-thumb.cover-fandom{background-image:url("./ghp-theme-fandom-thumb.webp")}
+.store-card-thumb.cover-fandom{background-image:image-set(url("./ghp-theme-fandom-thumb.avif") type("image/avif"),url("./ghp-theme-fandom-thumb.webp") type("image/webp"))}
+.game-thumb.fandom{background-image:url("./ghp-theme-fandom-card.webp")}
+.game-thumb.fandom{background-image:image-set(url("./ghp-theme-fandom-card.avif") type("image/avif"),url("./ghp-theme-fandom-card.webp") type("image/webp"))}
+.cover-everyday{background-image:url("./ghp-theme-everyday-card.webp")}
+.cover-everyday{background-image:image-set(url("./ghp-theme-everyday-card.avif") type("image/avif"),url("./ghp-theme-everyday-card.webp") type("image/webp"))}
+.store-card-thumb.cover-everyday{background-image:url("./ghp-theme-everyday-thumb.webp")}
+.store-card-thumb.cover-everyday{background-image:image-set(url("./ghp-theme-everyday-thumb.avif") type("image/avif"),url("./ghp-theme-everyday-thumb.webp") type("image/webp"))}
+.game-thumb.everyday{background-image:url("./ghp-theme-everyday-card.webp")}
+.game-thumb.everyday{background-image:image-set(url("./ghp-theme-everyday-card.avif") type("image/avif"),url("./ghp-theme-everyday-card.webp") type("image/webp"))}
+.cover-party{background-image:url("./ghp-theme-party-card.webp")}
+.cover-party{background-image:image-set(url("./ghp-theme-party-card.avif") type("image/avif"),url("./ghp-theme-party-card.webp") type("image/webp"))}
+.store-card-thumb.cover-party{background-image:url("./ghp-theme-party-thumb.webp")}
+.store-card-thumb.cover-party{background-image:image-set(url("./ghp-theme-party-thumb.avif") type("image/avif"),url("./ghp-theme-party-thumb.webp") type("image/webp"))}
+.game-thumb.party{background-image:url("./ghp-theme-party-card.webp")}
+.game-thumb.party{background-image:image-set(url("./ghp-theme-party-card.avif") type("image/avif"),url("./ghp-theme-party-card.webp") type("image/webp"))}
+.cover-drinks{background-image:url("./ghp-theme-drinks-card.webp")}
+.cover-drinks{background-image:image-set(url("./ghp-theme-drinks-card.avif") type("image/avif"),url("./ghp-theme-drinks-card.webp") type("image/webp"))}
+.store-card-thumb.cover-drinks{background-image:url("./ghp-theme-drinks-thumb.webp")}
+.store-card-thumb.cover-drinks{background-image:image-set(url("./ghp-theme-drinks-thumb.avif") type("image/avif"),url("./ghp-theme-drinks-thumb.webp") type("image/webp"))}
+.game-thumb.drinks{background-image:url("./ghp-theme-drinks-card.webp")}
+.game-thumb.drinks{background-image:image-set(url("./ghp-theme-drinks-card.avif") type("image/avif"),url("./ghp-theme-drinks-card.webp") type("image/webp"))}
+.cover-couples{background-image:url("./ghp-theme-couples-card.webp")}
+.cover-couples{background-image:image-set(url("./ghp-theme-couples-card.avif") type("image/avif"),url("./ghp-theme-couples-card.webp") type("image/webp"))}
+.store-card-thumb.cover-couples{background-image:url("./ghp-theme-couples-thumb.webp")}
+.store-card-thumb.cover-couples{background-image:image-set(url("./ghp-theme-couples-thumb.avif") type("image/avif"),url("./ghp-theme-couples-thumb.webp") type("image/webp"))}
+.game-thumb.couples{background-image:url("./ghp-theme-couples-card.webp")}
+.game-thumb.couples{background-image:image-set(url("./ghp-theme-couples-card.avif") type("image/avif"),url("./ghp-theme-couples-card.webp") type("image/webp"))}
+.cover-family{background-image:url("./ghp-theme-family-card.webp")}
+.cover-family{background-image:image-set(url("./ghp-theme-family-card.avif") type("image/avif"),url("./ghp-theme-family-card.webp") type("image/webp"))}
+.store-card-thumb.cover-family{background-image:url("./ghp-theme-family-thumb.webp")}
+.store-card-thumb.cover-family{background-image:image-set(url("./ghp-theme-family-thumb.avif") type("image/avif"),url("./ghp-theme-family-thumb.webp") type("image/webp"))}
+.game-thumb.family{background-image:url("./ghp-theme-family-card.webp")}
+.game-thumb.family{background-image:image-set(url("./ghp-theme-family-card.avif") type("image/avif"),url("./ghp-theme-family-card.webp") type("image/webp"))}
+.cover-office_party{background-image:url("./ghp-theme-office-party-card.webp")}
+.cover-office_party{background-image:image-set(url("./ghp-theme-office-party-card.avif") type("image/avif"),url("./ghp-theme-office-party-card.webp") type("image/webp"))}
+.store-card-thumb.cover-office_party{background-image:url("./ghp-theme-office-party-thumb.webp")}
+.store-card-thumb.cover-office_party{background-image:image-set(url("./ghp-theme-office-party-thumb.avif") type("image/avif"),url("./ghp-theme-office-party-thumb.webp") type("image/webp"))}
+.game-thumb.office_party{background-image:url("./ghp-theme-office-party-card.webp")}
+.game-thumb.office_party{background-image:image-set(url("./ghp-theme-office-party-card.avif") type("image/avif"),url("./ghp-theme-office-party-card.webp") type("image/webp"))}
+.cover-after_dark{background-image:url("./ghp-theme-after-dark-card.webp")}
+.cover-after_dark{background-image:image-set(url("./ghp-theme-after-dark-card.avif") type("image/avif"),url("./ghp-theme-after-dark-card.webp") type("image/webp"))}
+.store-card-thumb.cover-after_dark{background-image:url("./ghp-theme-after-dark-thumb.webp")}
+.store-card-thumb.cover-after_dark{background-image:image-set(url("./ghp-theme-after-dark-thumb.avif") type("image/avif"),url("./ghp-theme-after-dark-thumb.webp") type("image/webp"))}
+.game-thumb.after_dark{background-image:url("./ghp-theme-after-dark-card.webp")}
+.game-thumb.after_dark{background-image:image-set(url("./ghp-theme-after-dark-card.avif") type("image/avif"),url("./ghp-theme-after-dark-card.webp") type("image/webp"))}
+.cover-adult_couples{background-image:url("./ghp-theme-adult-couples-card.webp")}
+.cover-adult_couples{background-image:image-set(url("./ghp-theme-adult-couples-card.avif") type("image/avif"),url("./ghp-theme-adult-couples-card.webp") type("image/webp"))}
+.store-card-thumb.cover-adult_couples{background-image:url("./ghp-theme-adult-couples-thumb.webp")}
+.store-card-thumb.cover-adult_couples{background-image:image-set(url("./ghp-theme-adult-couples-thumb.avif") type("image/avif"),url("./ghp-theme-adult-couples-thumb.webp") type("image/webp"))}
+.game-thumb.adult_couples{background-image:url("./ghp-theme-adult-couples-card.webp")}
+.game-thumb.adult_couples{background-image:image-set(url("./ghp-theme-adult-couples-card.avif") type("image/avif"),url("./ghp-theme-adult-couples-card.webp") type("image/webp"))}
+.cover-adult_party{background-image:url("./ghp-theme-adult-party-card.webp")}
+.cover-adult_party{background-image:image-set(url("./ghp-theme-adult-party-card.avif") type("image/avif"),url("./ghp-theme-adult-party-card.webp") type("image/webp"))}
+.store-card-thumb.cover-adult_party{background-image:url("./ghp-theme-adult-party-thumb.webp")}
+.store-card-thumb.cover-adult_party{background-image:image-set(url("./ghp-theme-adult-party-thumb.avif") type("image/avif"),url("./ghp-theme-adult-party-thumb.webp") type("image/webp"))}
+.game-thumb.adult_party{background-image:url("./ghp-theme-adult-party-card.webp")}
+.game-thumb.adult_party{background-image:image-set(url("./ghp-theme-adult-party-card.avif") type("image/avif"),url("./ghp-theme-adult-party-card.webp") type("image/webp"))}
+.cover-bold{background-image:url("./ghp-theme-bold-card.webp")}
+.cover-bold{background-image:image-set(url("./ghp-theme-bold-card.avif") type("image/avif"),url("./ghp-theme-bold-card.webp") type("image/webp"))}
+.store-card-thumb.cover-bold{background-image:url("./ghp-theme-bold-thumb.webp")}
+.store-card-thumb.cover-bold{background-image:image-set(url("./ghp-theme-bold-thumb.avif") type("image/avif"),url("./ghp-theme-bold-thumb.webp") type("image/webp"))}
+.game-thumb.bold{background-image:url("./ghp-theme-bold-card.webp")}
+.game-thumb.bold{background-image:image-set(url("./ghp-theme-bold-card.avif") type("image/avif"),url("./ghp-theme-bold-card.webp") type("image/webp"))}
+.cover-wasteland{background-image:url("./ghp-theme-wasteland-card.webp")}
+.cover-wasteland{background-image:image-set(url("./ghp-theme-wasteland-card.avif") type("image/avif"),url("./ghp-theme-wasteland-card.webp") type("image/webp"))}
+.store-card-thumb.cover-wasteland{background-image:url("./ghp-theme-wasteland-thumb.webp")}
+.store-card-thumb.cover-wasteland{background-image:image-set(url("./ghp-theme-wasteland-thumb.avif") type("image/avif"),url("./ghp-theme-wasteland-thumb.webp") type("image/webp"))}
+.game-thumb.wasteland{background-image:url("./ghp-theme-wasteland-card.webp")}
+.game-thumb.wasteland{background-image:image-set(url("./ghp-theme-wasteland-card.avif") type("image/avif"),url("./ghp-theme-wasteland-card.webp") type("image/webp"))}
+.cover-space{background-image:url("./ghp-theme-space-card.webp")}
+.cover-space{background-image:image-set(url("./ghp-theme-space-card.avif") type("image/avif"),url("./ghp-theme-space-card.webp") type("image/webp"))}
+.store-card-thumb.cover-space{background-image:url("./ghp-theme-space-thumb.webp")}
+.store-card-thumb.cover-space{background-image:image-set(url("./ghp-theme-space-thumb.avif") type("image/avif"),url("./ghp-theme-space-thumb.webp") type("image/webp"))}
+.game-thumb.space{background-image:url("./ghp-theme-space-card.webp")}
+.game-thumb.space{background-image:image-set(url("./ghp-theme-space-card.avif") type("image/avif"),url("./ghp-theme-space-card.webp") type("image/webp"))}
+.cover-mystic{background-image:url("./ghp-theme-mystic-card.webp")}
+.cover-mystic{background-image:image-set(url("./ghp-theme-mystic-card.avif") type("image/avif"),url("./ghp-theme-mystic-card.webp") type("image/webp"))}
+.store-card-thumb.cover-mystic{background-image:url("./ghp-theme-mystic-thumb.webp")}
+.store-card-thumb.cover-mystic{background-image:image-set(url("./ghp-theme-mystic-thumb.avif") type("image/avif"),url("./ghp-theme-mystic-thumb.webp") type("image/webp"))}
+.game-thumb.mystic{background-image:url("./ghp-theme-mystic-card.webp")}
+.game-thumb.mystic{background-image:image-set(url("./ghp-theme-mystic-card.avif") type("image/avif"),url("./ghp-theme-mystic-card.webp") type("image/webp"))}
+.cover-hard_medical{background-image:url("./ghp-theme-hard-medical-card.webp")}
+.cover-hard_medical{background-image:image-set(url("./ghp-theme-hard-medical-card.avif") type("image/avif"),url("./ghp-theme-hard-medical-card.webp") type("image/webp"))}
+.store-card-thumb.cover-hard_medical{background-image:url("./ghp-theme-hard-medical-thumb.webp")}
+.store-card-thumb.cover-hard_medical{background-image:image-set(url("./ghp-theme-hard-medical-thumb.avif") type("image/avif"),url("./ghp-theme-hard-medical-thumb.webp") type("image/webp"))}
+.game-thumb.hard_medical{background-image:url("./ghp-theme-hard-medical-card.webp")}
+.game-thumb.hard_medical{background-image:image-set(url("./ghp-theme-hard-medical-card.avif") type("image/avif"),url("./ghp-theme-hard-medical-card.webp") type("image/webp"))}
+.cover-bunker_classic{background-image:url("./ghp-theme-bunker-classic-card.webp")}
+.cover-bunker_classic{background-image:image-set(url("./ghp-theme-bunker-classic-card.avif") type("image/avif"),url("./ghp-theme-bunker-classic-card.webp") type("image/webp"))}
+.store-card-thumb.cover-bunker_classic{background-image:url("./ghp-theme-bunker-classic-thumb.webp")}
+.store-card-thumb.cover-bunker_classic{background-image:image-set(url("./ghp-theme-bunker-classic-thumb.avif") type("image/avif"),url("./ghp-theme-bunker-classic-thumb.webp") type("image/webp"))}
+.game-thumb.bunker_classic{background-image:url("./ghp-theme-bunker-classic-card.webp")}
+.game-thumb.bunker_classic{background-image:image-set(url("./ghp-theme-bunker-classic-card.avif") type("image/avif"),url("./ghp-theme-bunker-classic-card.webp") type("image/webp"))}
+.cover-items_home{background-image:url("./ghp-item-home-card.webp")}
+.cover-items_home{background-image:image-set(url("./ghp-item-home-card.avif") type("image/avif"),url("./ghp-item-home-card.webp") type("image/webp"))}
+.store-card-thumb.cover-items_home{background-image:url("./ghp-item-home-thumb.webp")}
+.store-card-thumb.cover-items_home{background-image:image-set(url("./ghp-item-home-thumb.avif") type("image/avif"),url("./ghp-item-home-thumb.webp") type("image/webp"))}
+.game-thumb.items_home{background-image:url("./ghp-item-home-card.webp")}
+.game-thumb.items_home{background-image:image-set(url("./ghp-item-home-card.avif") type("image/avif"),url("./ghp-item-home-card.webp") type("image/webp"))}
+.cover-items_party{background-image:url("./ghp-item-party-card.webp")}
+.cover-items_party{background-image:image-set(url("./ghp-item-party-card.avif") type("image/avif"),url("./ghp-item-party-card.webp") type("image/webp"))}
+.store-card-thumb.cover-items_party{background-image:url("./ghp-item-party-thumb.webp")}
+.store-card-thumb.cover-items_party{background-image:image-set(url("./ghp-item-party-thumb.avif") type("image/avif"),url("./ghp-item-party-thumb.webp") type("image/webp"))}
+.game-thumb.items_party{background-image:url("./ghp-item-party-card.webp")}
+.game-thumb.items_party{background-image:image-set(url("./ghp-item-party-card.avif") type("image/avif"),url("./ghp-item-party-card.webp") type("image/webp"))}
+.cover-items_gadgets{background-image:url("./ghp-item-gadgets-card.webp")}
+.cover-items_gadgets{background-image:image-set(url("./ghp-item-gadgets-card.avif") type("image/avif"),url("./ghp-item-gadgets-card.webp") type("image/webp"))}
+.store-card-thumb.cover-items_gadgets{background-image:url("./ghp-item-gadgets-thumb.webp")}
+.store-card-thumb.cover-items_gadgets{background-image:image-set(url("./ghp-item-gadgets-thumb.avif") type("image/avif"),url("./ghp-item-gadgets-thumb.webp") type("image/webp"))}
+.game-thumb.items_gadgets{background-image:url("./ghp-item-gadgets-card.webp")}
+.game-thumb.items_gadgets{background-image:image-set(url("./ghp-item-gadgets-card.avif") type("image/avif"),url("./ghp-item-gadgets-card.webp") type("image/webp"))}
+.cover-items_couples{background-image:url("./ghp-item-couples-card.webp")}
+.cover-items_couples{background-image:image-set(url("./ghp-item-couples-card.avif") type("image/avif"),url("./ghp-item-couples-card.webp") type("image/webp"))}
+.store-card-thumb.cover-items_couples{background-image:url("./ghp-item-couples-thumb.webp")}
+.store-card-thumb.cover-items_couples{background-image:image-set(url("./ghp-item-couples-thumb.avif") type("image/avif"),url("./ghp-item-couples-thumb.webp") type("image/webp"))}
+.game-thumb.items_couples{background-image:url("./ghp-item-couples-card.webp")}
+.game-thumb.items_couples{background-image:image-set(url("./ghp-item-couples-card.avif") type("image/avif"),url("./ghp-item-couples-card.webp") type("image/webp"))}
+.cover-items_after_dark{background-image:url("./ghp-item-after-dark-card.webp")}
+.cover-items_after_dark{background-image:image-set(url("./ghp-item-after-dark-card.avif") type("image/avif"),url("./ghp-item-after-dark-card.webp") type("image/webp"))}
+.store-card-thumb.cover-items_after_dark{background-image:url("./ghp-item-after-dark-thumb.webp")}
+.store-card-thumb.cover-items_after_dark{background-image:image-set(url("./ghp-item-after-dark-thumb.avif") type("image/avif"),url("./ghp-item-after-dark-thumb.webp") type("image/webp"))}
+.game-thumb.items_after_dark{background-image:url("./ghp-item-after-dark-card.webp")}
+.game-thumb.items_after_dark{background-image:image-set(url("./ghp-item-after-dark-card.avif") type("image/avif"),url("./ghp-item-after-dark-card.webp") type("image/webp"))}
+.cover-items_weird{background-image:url("./ghp-item-weird-card.webp")}
+.cover-items_weird{background-image:image-set(url("./ghp-item-weird-card.avif") type("image/avif"),url("./ghp-item-weird-card.webp") type("image/webp"))}
+.store-card-thumb.cover-items_weird{background-image:url("./ghp-item-weird-thumb.webp")}
+.store-card-thumb.cover-items_weird{background-image:image-set(url("./ghp-item-weird-thumb.avif") type("image/avif"),url("./ghp-item-weird-thumb.webp") type("image/webp"))}
+.game-thumb.items_weird{background-image:url("./ghp-item-weird-card.webp")}
+.game-thumb.items_weird{background-image:image-set(url("./ghp-item-weird-card.avif") type("image/avif"),url("./ghp-item-weird-card.webp") type("image/webp"))}
+.cover-items_alcohol{background-image:url("./ghp-item-alcohol-card.webp")}
+.cover-items_alcohol{background-image:image-set(url("./ghp-item-alcohol-card.avif") type("image/avif"),url("./ghp-item-alcohol-card.webp") type("image/webp"))}
+.store-card-thumb.cover-items_alcohol{background-image:url("./ghp-item-alcohol-thumb.webp")}
+.store-card-thumb.cover-items_alcohol{background-image:image-set(url("./ghp-item-alcohol-thumb.avif") type("image/avif"),url("./ghp-item-alcohol-thumb.webp") type("image/webp"))}
+.game-thumb.items_alcohol{background-image:url("./ghp-item-alcohol-card.webp")}
+.game-thumb.items_alcohol{background-image:image-set(url("./ghp-item-alcohol-card.avif") type("image/avif"),url("./ghp-item-alcohol-card.webp") type("image/webp"))}
+.cover-items_computer_games{background-image:url("./ghp-item-computer-games-card.webp")}
+.cover-items_computer_games{background-image:image-set(url("./ghp-item-computer-games-card.avif") type("image/avif"),url("./ghp-item-computer-games-card.webp") type("image/webp"))}
+.store-card-thumb.cover-items_computer_games{background-image:url("./ghp-item-computer-games-thumb.webp")}
+.store-card-thumb.cover-items_computer_games{background-image:image-set(url("./ghp-item-computer-games-thumb.avif") type("image/avif"),url("./ghp-item-computer-games-thumb.webp") type("image/webp"))}
+.game-thumb.items_computer_games{background-image:url("./ghp-item-computer-games-card.webp")}
+.game-thumb.items_computer_games{background-image:image-set(url("./ghp-item-computer-games-card.avif") type("image/avif"),url("./ghp-item-computer-games-card.webp") type("image/webp"))}
+.cover-spy{background-image:url("./ghp-game-spy-square-card.webp")}
+.cover-spy{background-image:image-set(url("./ghp-game-spy-square-card.avif") type("image/avif"),url("./ghp-game-spy-square-card.webp") type("image/webp"))}
+.store-card-thumb.cover-spy{background-image:url("./ghp-game-spy-square-thumb.webp")}
+.store-card-thumb.cover-spy{background-image:image-set(url("./ghp-game-spy-square-thumb.avif") type("image/avif"),url("./ghp-game-spy-square-thumb.webp") type("image/webp"))}
+.game-thumb.spy{background-image:url("./ghp-game-spy-square-card.webp")}
+.game-thumb.spy{background-image:image-set(url("./ghp-game-spy-square-card.avif") type("image/avif"),url("./ghp-game-spy-square-card.webp") type("image/webp"))}
+.cover-alias{background-image:url("./ghp-game-alias-square-card.webp")}
+.cover-alias{background-image:image-set(url("./ghp-game-alias-square-card.avif") type("image/avif"),url("./ghp-game-alias-square-card.webp") type("image/webp"))}
+.store-card-thumb.cover-alias{background-image:url("./ghp-game-alias-square-thumb.webp")}
+.store-card-thumb.cover-alias{background-image:image-set(url("./ghp-game-alias-square-thumb.avif") type("image/avif"),url("./ghp-game-alias-square-thumb.webp") type("image/webp"))}
+.game-thumb.alias{background-image:url("./ghp-game-alias-square-card.webp")}
+.game-thumb.alias{background-image:image-set(url("./ghp-game-alias-square-card.avif") type("image/avif"),url("./ghp-game-alias-square-card.webp") type("image/webp"))}
+.cover-bunker{background-image:url("./ghp-game-bunker-square-card.webp")}
+.cover-bunker{background-image:image-set(url("./ghp-game-bunker-square-card.avif") type("image/avif"),url("./ghp-game-bunker-square-card.webp") type("image/webp"))}
+.store-card-thumb.cover-bunker{background-image:url("./ghp-game-bunker-square-thumb.webp")}
+.store-card-thumb.cover-bunker{background-image:image-set(url("./ghp-game-bunker-square-thumb.avif") type("image/avif"),url("./ghp-game-bunker-square-thumb.webp") type("image/webp"))}
+.game-thumb.bunker{background-image:url("./ghp-game-bunker-square-card.webp")}
+.game-thumb.bunker{background-image:image-set(url("./ghp-game-bunker-square-card.avif") type("image/avif"),url("./ghp-game-bunker-square-card.webp") type("image/webp"))}
+.cover-truthdare{background-image:url("./ghp-game-truthdare-square-card.webp")}
+.cover-truthdare{background-image:image-set(url("./ghp-game-truthdare-square-card.avif") type("image/avif"),url("./ghp-game-truthdare-square-card.webp") type("image/webp"))}
+.store-card-thumb.cover-truthdare{background-image:url("./ghp-game-truthdare-square-thumb.webp")}
+.store-card-thumb.cover-truthdare{background-image:image-set(url("./ghp-game-truthdare-square-thumb.avif") type("image/avif"),url("./ghp-game-truthdare-square-thumb.webp") type("image/webp"))}
+.game-thumb.truthdare{background-image:url("./ghp-game-truthdare-square-card.webp")}
+.game-thumb.truthdare{background-image:image-set(url("./ghp-game-truthdare-square-card.avif") type("image/avif"),url("./ghp-game-truthdare-square-card.webp") type("image/webp"))}
+.cover-store_weekend{background-image:url("./ghp-store-weekend-card.webp")}
+.cover-store_weekend{background-image:image-set(url("./ghp-store-weekend-card.avif") type("image/avif"),url("./ghp-store-weekend-card.webp") type("image/webp"))}
+.store-card-thumb.cover-store_weekend{background-image:url("./ghp-store-weekend-thumb.webp")}
+.store-card-thumb.cover-store_weekend{background-image:image-set(url("./ghp-store-weekend-thumb.avif") type("image/avif"),url("./ghp-store-weekend-thumb.webp") type("image/webp"))}
+.game-thumb.store_weekend{background-image:url("./ghp-store-weekend-card.webp")}
+.game-thumb.store_weekend{background-image:image-set(url("./ghp-store-weekend-card.avif") type("image/avif"),url("./ghp-store-weekend-card.webp") type("image/webp"))}
+.cover-store_pro{background-image:url("./ghp-store-pro-card.webp")}
+.cover-store_pro{background-image:image-set(url("./ghp-store-pro-card.avif") type("image/avif"),url("./ghp-store-pro-card.webp") type("image/webp"))}
+.store-card-thumb.cover-store_pro{background-image:url("./ghp-store-pro-thumb.webp")}
+.store-card-thumb.cover-store_pro{background-image:image-set(url("./ghp-store-pro-thumb.avif") type("image/avif"),url("./ghp-store-pro-thumb.webp") type("image/webp"))}
+.game-thumb.store_pro{background-image:url("./ghp-store-pro-card.webp")}
+.game-thumb.store_pro{background-image:image-set(url("./ghp-store-pro-card.avif") type("image/avif"),url("./ghp-store-pro-card.webp") type("image/webp"))}
+.hub-art,.project-hero:before{background-image:url("./ghp-hero-home-card.webp")}
+.hub-art,.project-hero:before{background-image:image-set(url("./ghp-hero-home-card.avif") type("image/avif"),url("./ghp-hero-home-card.webp") type("image/webp"))}
+.spy-art,.spy-hero:before,.landing-game-art.spy-art{background-image:url("./ghp-game-spy-hero-card.webp")}
+.spy-art,.spy-hero:before,.landing-game-art.spy-art{background-image:image-set(url("./ghp-game-spy-hero-card.avif") type("image/avif"),url("./ghp-game-spy-hero-card.webp") type("image/webp"))}
+.alias-hero-art,.alias-art,.landing-game-art.alias-art{background-image:url("./ghp-game-alias-hero-card.webp")}
+.alias-hero-art,.alias-art,.landing-game-art.alias-art{background-image:image-set(url("./ghp-game-alias-hero-card.avif") type("image/avif"),url("./ghp-game-alias-hero-card.webp") type("image/webp"))}
+.bunker-hero-art,.landing-game-art.bunker-art{background-image:url("./ghp-game-bunker-hero-card.webp")}
+.bunker-hero-art,.landing-game-art.bunker-art{background-image:image-set(url("./ghp-game-bunker-hero-card.avif") type("image/avif"),url("./ghp-game-bunker-hero-card.webp") type("image/webp"))}
+.truthdare-hero-art,.truthdare-art,.landing-game-art.truthdare-art{background-image:url("./ghp-game-truthdare-hero-card.webp")}
+.truthdare-hero-art,.truthdare-art,.landing-game-art.truthdare-art{background-image:image-set(url("./ghp-game-truthdare-hero-card.avif") type("image/avif"),url("./ghp-game-truthdare-hero-card.webp") type("image/webp"))}

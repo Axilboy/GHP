@@ -4,8 +4,28 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="shortcut icon" href="/favicon.svg" />
-  <title>GameHubParty - игры для компании</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="shortcut icon" href="/favicon-32x32.png" />
+  <link rel="apple-touch-icon" href="/ghp-apple-touch.png" />
+  <link rel="preload" href="/fonts/manrope-cyrillic.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <title>GameHubParty — игры для компании без подготовки</title>
+  <meta name="description" content="Игры для компании в одном телефоне: Шпион, Alias, Бункер и Правда или действие. Создайте комнату, позовите друзей по коду — сайт сам ведёт роли, таймер и голосование." />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="https://gamehubparty.ru/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="GameHubParty" />
+  <meta property="og:title" content="GameHubParty — игры для компании в телефоне" />
+  <meta property="og:description" content="Создайте комнату, выберите игру и позовите друзей по коду. Платит только хост — друзья заходят бесплатно." />
+  <meta property="og:url" content="https://gamehubparty.ru/" />
+  <meta property="og:image" content="https://gamehubparty.ru/ghp-og-cover.jpg" />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="GameHubParty — игры для компании в телефоне" />
+  <meta name="twitter:description" content="Шпион, Alias, Бункер и Правда или действие. Комната, код, друзья — играете сразу." />
+  <meta name="twitter:image" content="https://gamehubparty.ru/ghp-og-cover.jpg" />
   <script>
     (function () {
       var params = new URLSearchParams(window.location.search);
@@ -39,7 +59,47 @@
   </script>
 </head>
 <body>
+  <style>
+    #ghp-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+      background:radial-gradient(circle at 50% -20%,#eaf2ff 0,#fbfaf7 38%);
+      transition:opacity .4s ease;font-family:Manrope,ui-sans-serif,system-ui,sans-serif}
+    #ghp-splash.ghp-splash--hide{opacity:0;pointer-events:none}
+    .ghp-splash__inner{display:flex;flex-direction:column;align-items:center;gap:20px;width:min(100% - 64px,320px)}
+    .ghp-splash__brand{font-size:26px;font-weight:800;letter-spacing:-.06em;color:#101a36;animation:ghp-splash-pulse 1.4s ease-in-out infinite}
+    .ghp-splash__brand span{color:#ff665c}
+    .ghp-splash__bar{position:relative;width:100%;height:8px;border-radius:999px;background:#e7e9ee;overflow:hidden}
+    .ghp-splash__bar i{position:absolute;inset:0;width:0;border-radius:999px;
+      background:linear-gradient(90deg,#1769f6,#ff665c);transition:width .3s ease;
+      animation:ghp-splash-creep 2.5s ease-out forwards}
+    .ghp-splash__bar:after{content:"";position:absolute;inset:0;border-radius:999px;
+      background:linear-gradient(90deg,transparent,#ffffff80,transparent);transform:translateX(-100%);
+      animation:ghp-splash-sweep 1.2s ease-in-out infinite}
+    .ghp-splash__count{font-size:13px;font-weight:700;color:#687083;letter-spacing:.02em}
+    .ghp-splash__bytes{font-size:12px;color:#8b93a3;margin-top:-12px;min-height:15px;
+      font-variant-numeric:tabular-nums}
+    .ghp-splash__hint{font-size:12px;color:#687083;opacity:0;margin-top:-10px;
+      animation:ghp-splash-hint .4s ease 2.5s forwards}
+    @keyframes ghp-splash-pulse{0%,100%{opacity:.65;transform:scale(.98)}50%{opacity:1;transform:scale(1)}}
+    @keyframes ghp-splash-sweep{100%{transform:translateX(100%)}}
+    @keyframes ghp-splash-creep{0%{width:0}100%{width:65%}}
+    @keyframes ghp-splash-hint{100%{opacity:1}}
+    @media (prefers-reduced-motion:reduce){.ghp-splash__brand,.ghp-splash__bar:after{animation:none}}
+  </style>
+  <div id="ghp-splash" role="status" aria-live="polite" aria-label="Загрузка GameHubParty">
+    <div class="ghp-splash__inner">
+      <div class="ghp-splash__brand">GameHub<span>·</span>Party</div>
+      <div class="ghp-splash__bar"><i id="ghp-splash-fill"></i></div>
+      <div class="ghp-splash__count" id="ghp-splash-count">Готовим приложение…</div>
+      <div class="ghp-splash__bytes" id="ghp-splash-bytes"></div>
+      <div class="ghp-splash__hint">Первая загрузка — дальше открывается мгновенно</div>
+    </div>
+  </div>
+  <script>
+    // Страховка: если бандл не загрузился, не держим пользователя на сплэше вечно.
+    setTimeout(function(){var s=document.getElementById('ghp-splash');if(s)s.classList.add('ghp-splash--hide');},8000);
+  </script>
   <div id="root"></div>
+  <noscript><div><img src="https://mc.yandex.ru/watch/%VITE_YANDEX_METRIKA_ID%" style="position:absolute;left:-9999px" alt="" /></div></noscript>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>

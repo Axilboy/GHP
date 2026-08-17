@@ -33,7 +33,7 @@ function normalizeFeedback(request) {
 }
 
 function normalizeAnalyticsEvent(request) {
-  const allowed = new Set(['page_view', 'open_store', 'start_checkout', 'payment_success', 'payment_failed', 'feedback_opened']);
+  const allowed = new Set(['page_view', 'open_store', 'start_checkout', 'payment_success', 'payment_failed', 'feedback_opened', 'game_started', 'registration', 'return_visit', 'pro_purchase']);
   const name = String(request.body?.name || '').trim().toLowerCase().replace(/[^a-z0-9:_-]+/g, '_').slice(0, 80);
   if (!allowed.has(name)) throw new Error('Unknown analytics event');
   const details = request.body?.details || {};
@@ -48,8 +48,16 @@ function normalizeAnalyticsEvent(request) {
       source: cleanFeedbackText(details.source || details.utmSource, 80),
       medium: cleanFeedbackText(details.medium || details.utmMedium, 80),
       campaign: cleanFeedbackText(details.campaign || details.utmCampaign, 80),
+      content: cleanFeedbackText(details.content || details.utmContent, 120),
+      term: cleanFeedbackText(details.term || details.utmTerm, 120),
       productId: cleanFeedbackText(details.productId, 80),
       type: cleanFeedbackText(details.type, 80),
+      game_type: cleanFeedbackText(details.game_type, 40),
+      players_count: Math.max(0, Math.min(100, Number(details.players_count) || 0)),
+      room_id_hash: cleanFeedbackText(details.room_id_hash, 32),
+      method: cleanFeedbackText(details.method, 40),
+      amount_rub: Math.max(0, Number(details.amount_rub) || 0),
+      months: Math.max(0, Math.min(120, Number(details.months) || 0)),
       userAgent: cleanFeedbackText(request.get('user-agent'), 180),
     },
   };

@@ -71,6 +71,21 @@ test('paid item catalog includes alcohol and computer games packs', () => {
   assert.ok(getSpyBundle('items_pack').dictionaryIds.includes('items_computer_games'));
 });
 
+test('spy catalog includes franchise location packs', () => {
+  const dictionaries = listSpyDictionaries();
+  const harryPotter = dictionaries.find((dictionary) => dictionary.id === 'harry_potter');
+  const lotr = dictionaries.find((dictionary) => dictionary.id === 'lotr');
+  const retroMovies = dictionaries.find((dictionary) => dictionary.id === 'retro_movies');
+  const videoGames = dictionaries.find((dictionary) => dictionary.id === 'video_games');
+
+  assert.equal(harryPotter?.name, 'Гарри Поттер');
+  assert.equal(lotr?.name, 'Властелин колец');
+  assert.equal(retroMovies?.priceRub, 129);
+  assert.equal(videoGames?.free, false);
+  assert.ok(getSpyBundle('fandom_pack').dictionaryIds.includes('harry_potter'));
+  assert.ok(getSpyBundle('all_spy').dictionaryIds.includes('video_games'));
+});
+
 test('new round avoids recently used locations when alternatives exist', () => {
   const room = {
     settings: normalizeSpySettings(),
@@ -83,16 +98,16 @@ test('new round avoids recently used locations when alternatives exist', () => {
   assert.ok(round.firstQuestionerId);
 });
 
-test('duo mode assigns two spies and exposes teammates only to spies', () => {
+test('multiple spies are controlled by spy count and expose teammates', () => {
   const room = {
-    settings: normalizeSpySettings({ mode: 'duo' }),
-    players: [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }],
+    settings: normalizeSpySettings({ spyCount: 4 }),
+    players: [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }, { id: 'e' }],
     round: null,
   };
   room.round = createSpyRound(room, () => 0);
   const cards = room.players.map((player) => getSpyPlayerCard(room, player.id));
-  assert.equal(cards.filter((card) => card.isSpy).length, 2);
-  assert.ok(cards.filter((card) => card.isSpy).every((card) => card.teammates.length === 1));
+  assert.equal(cards.filter((card) => card.isSpy).length, 4);
+  assert.ok(cards.filter((card) => card.isSpy).every((card) => card.teammates.length === 3));
 });
 
 test('custom locations can be selected for a round', () => {

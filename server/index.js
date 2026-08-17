@@ -1,5 +1,6 @@
 ﻿import { createServer } from 'node:http';
 import crypto from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
@@ -22,6 +23,7 @@ import { connectRoomPersistence, loadRoomSnapshot, scheduleRoomSnapshot } from '
 import { checkHttpRate, checkRate, cleanupExpiredRateLimits } from './lib/rateLimit.js';
 import { sendSystemEmail } from './lib/mailer.js';
 import { verifyVkLaunch } from './lib/vk.js';
+import { canonicalRedirectTarget, createPublicPageHandler } from './publicPages.js';
 import { cleanAvatarDataUrl, cleanName, cleanPlayerId } from './lib/validators.js';
 import { persistProfiles, persistRooms } from './lib/persist.js';
 import {
@@ -56,6 +58,7 @@ import {
   unlockCustomDictionary,
   getOrCreateProfile,
   hasAdFreeAccess,
+  hasAnyThemePass,
   hasTimedGameAccess,
   publicProfile,
   unlockDemoDictionary,
@@ -80,6 +83,8 @@ import {
   publicBunkerCards,
   startBunkerAfterBriefing,
 } from './games/bunker/index.js';
+import { advanceTruthDareRound, createTruthDareRound, truthDareDecks, truthDareDefinition } from './games/truthdare/index.js';
+import { getContentThemeIds, listThemePasses } from './games/thematicPasses.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -88,11 +93,16 @@ const io = new Server(server, { cors: { origin: true, credentials: true } });
 const port = Number(process.env.PORT || 3100);
 const inactiveRoomTtlMs = Number(process.env.ROOM_TTL_MS || 6 * 60 * 60 * 1000);
 
+app.use((request, response, next) => {
+  if (process.env.NODE_ENV !== 'production') return next();
+  const target = canonicalRedirectTarget(request.get('host'), request.originalUrl);
+  return target ? response.redirect(301, target) : next();
+});
 app.use(express.json({ limit: '64kb' }));
 
 app.get('/api/health', (_request, response) => response.json({ ok: true }));
-app.get('/api/status', (_request, response) => response.json({ ok: true, games: ['spy', 'alias', 'bunker'], activeRooms: allRooms().length, analytics: analyticsSnapshot() }));
-app.get('/api/games', (_request, response) => response.json({ games: [spyDefinition, aliasDefinition, bunkerDefinition] }));
+app.get('/api/status', (_request, response) => response.json({ ok: true, games: ['spy', 'alias', 'bunker', 'truthdare'], activeRooms: allRooms().length, analytics: analyticsSnapshot() }));
+app.get('/api/games', (_request, response) => response.json({ games: [spyDefinition, aliasDefinition, bunkerDefinition, truthDareDefinition] }));
 app.use('/api', feedbackRouter);
 app.post('/api/vk/launch', (request, response) => {
   const result = verifyVkLaunch(request.body?.params || {}, process.env.VK_APP_SECRET);
@@ -107,20 +117,26 @@ app.post('/api/yookassa/webhook', async (request, response) => {
   }
 });
 app.use('/api/auth', authRouter);
-app.get('/api/games/alias/catalog', (_request, response) => response.json({ definition: aliasDefinition, dictionaries: aliasDictionaryPreview }));
-app.get('/api/games/bunker/catalog', (_request, response) => response.json({ definition: bunkerDefinition, fields: bunkerCardFields, contentPacks: bunkerContentPacks }));
+function withThemeIds(gameId, items = []) {
+  return items.map((item) => ({ ...item, themeIds: getContentThemeIds(gameId, item.id) }));
+}
+
+app.get('/api/games/alias/catalog', (_request, response) => response.json({ definition: aliasDefinition, dictionaries: withThemeIds('alias', aliasDictionaryPreview) }));
+app.get('/api/games/bunker/catalog', (_request, response) => response.json({ definition: bunkerDefinition, fields: bunkerCardFields, contentPacks: withThemeIds('bunker', bunkerContentPacks) }));
 app.get('/api/games/spy/catalog', (_request, response) => response.json({
   definition: spyDefinition,
-  dictionaries: listSpyDictionaries(),
+  dictionaries: withThemeIds('spy', listSpyDictionaries()),
   bundles: listSpyBundles(),
-  aliasDictionaries: aliasDictionaryPreview,
-  bunkerContentPacks,
+  aliasDictionaries: withThemeIds('alias', aliasDictionaryPreview),
+  bunkerContentPacks: withThemeIds('bunker', bunkerContentPacks),
   subscriptions: [{ id: 'pro', name: 'PRO на месяц', priceRub: 299 }],
   gamePasses: [
     { id: 'spy_pass', name: 'Spy Pass', gameId: 'spy', priceRub: 99 },
     { id: 'alias_pass', name: 'Alias Pass', gameId: 'alias', priceRub: 99 },
     { id: 'bunker_pass', name: 'Bunker Pass', gameId: 'bunker', priceRub: 99 },
   ],
+  themePasses: listThemePasses(),
+  truthDareDecks: withThemeIds('truthdare', truthDareDecks),
   passes: [{ id: 'party_pass_24h', name: 'WeekendPass', hours: 24, priceRub: 149 }],
   themes: roomThemes,
 }));
@@ -131,8 +147,50 @@ app.use('/api/admin', adminRouter);
 
 if (process.env.NODE_ENV === 'production') {
   const dist = path.join(__dirname, '..', 'dist');
-  app.use(express.static(dist));
-  app.get('/{*splat}', (_request, response) => response.sendFile(path.join(dist, 'index.html')));
+  let buildId = 'unknown';
+  try {
+    buildId = JSON.parse(readFileSync(path.join(dist, 'version.json'), 'utf8')).buildId || buildId;
+  } catch {
+    // The app still starts if an old deployment has no build manifest yet.
+  }
+  app.use((request, response, next) => {
+    const acceptsHtml = request.method === 'GET' && (
+      request.get('sec-fetch-dest') === 'document'
+      || request.get('accept')?.includes('text/html')
+    );
+    if (acceptsHtml) {
+      response.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+      response.setHeader('Pragma', 'no-cache');
+      response.setHeader('Expires', '0');
+      const cookieBuild = request.headers.cookie?.match(/(?:^|;\s*)ghp_build=([^;]+)/)?.[1];
+      if (cookieBuild !== buildId) {
+        response.setHeader('Clear-Site-Data', '"cache"');
+        response.append('Set-Cookie', `ghp_build=${encodeURIComponent(buildId)}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`);
+      }
+    }
+    next();
+  });
+  const retireServiceWorker = (_request, response) => {
+    response.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    response.type('application/javascript').send("self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',event=>event.waitUntil((async()=>{for(const key of await caches.keys())await caches.delete(key);await self.registration.unregister();for(const client of await self.clients.matchAll({type:'window'}))client.navigate(client.url)})()));");
+  };
+  app.get(['/sw.js', '/service-worker.js'], retireServiceWorker);
+  app.use(express.static(dist, {
+    index: false,
+    setHeaders(response, filePath) {
+      // Хешированные ассеты Vite (/assets/index-abc123.js) неизменны — кэшируем навсегда.
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        response.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else if (filePath.endsWith('.html') || filePath.endsWith('version.json')) {
+        response.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+        response.setHeader('Pragma', 'no-cache');
+        response.setHeader('Expires', '0');
+      } else {
+        response.setHeader('Cache-Control', 'public, max-age=86400');
+      }
+    },
+  }));
+  app.get('/{*splat}', createPublicPageHandler(dist));
 }
 
 async function replyWith(callback, action) {
@@ -165,20 +223,25 @@ function getRoomAdPolicy(room) {
 }
 
 function resetRoomGame(room, gameId) {
-  if (!['spy', 'alias', 'bunker'].includes(gameId) || room.gameId === gameId) return;
+  if (!['spy', 'alias', 'bunker', 'truthdare'].includes(gameId) || room.gameId === gameId) return;
   room.gameId = gameId;
   room.settings = gameId === 'alias'
     ? { ...aliasDefinition.defaultSettings }
     : gameId === 'bunker'
       ? { ...bunkerDefinition.defaultSettings }
-      : { ...spyDefinition.defaultSettings };
+      : gameId === 'truthdare'
+        ? { ...truthDareDefinition.defaultSettings }
+        : { ...spyDefinition.defaultSettings };
   room.scores = gameId === 'alias'
     ? { team_1: 0, team_2: 0 }
     : gameId === 'bunker'
       ? { saved: 0, eliminated: 0 }
-      : { civilians: 0, spies: 0 };
+      : gameId === 'truthdare'
+        ? {}
+        : { civilians: 0, spies: 0 };
   room.aliasTeams = [];
   room.usedAliasWords = [];
+  room.truthDareTurnIndex = -1;
   room.round = null;
   room.matchHistory = [];
   room.players.forEach((player) => { player.ready = player.id === room.hostId; });
@@ -194,6 +257,14 @@ function assertThemeAvailable(playerId, themeId) {
   if (!roomThemes.some((theme) => theme.id === safeThemeId)) throw new Error('Тема не найдена');
   if (!ownedThemeIds(playerId).has(safeThemeId)) throw new Error('Сначала купите эту тему');
   return safeThemeId;
+}
+
+function hasProAccess(profile, now = Date.now()) {
+  return Boolean(profile?.pro || profile?.proPlus || Number(profile?.subscription?.activeUntil || 0) > now);
+}
+
+function assertTruthDareAccess(playerId) {
+  if (!hasProAccess(getOrCreateProfile(playerId))) throw new Error('Правда или действие пока доступна только в PRO');
 }
 
 
@@ -411,7 +482,8 @@ io.on('connection', (socket) => {
   socket.on('create_room', (payload, callback) => replyWith(callback, () => {
     checkRate(socket, 'create_room', 3, 60000);
     const playerId = cleanPlayerId(payload.playerId);
-    const gameId = ['alias', 'bunker'].includes(payload.gameId) ? payload.gameId : 'spy';
+    const gameId = ['alias', 'bunker', 'truthdare'].includes(payload.gameId) ? payload.gameId : 'spy';
+    if (gameId === 'truthdare') assertTruthDareAccess(playerId);
     const room = createRoom({ hostId: playerId, hostName: cleanName(payload.name), gameId });
     track('room_created', { gameId, playerId, roomId: room.id });
     updateProfileName(playerId, room.players[0].name);
@@ -475,6 +547,7 @@ io.on('connection', (socket) => {
     checkRate(socket, 'change_game', 12, 10000);
     const room = getRoom(roomId);
     if (!room || room.hostId !== socket.data.playerId || room.state !== 'lobby') throw new Error('Только хост может менять игру в лобби');
+    if (String(gameId || 'spy') === 'truthdare') assertTruthDareAccess(socket.data.playerId);
     resetRoomGame(room, String(gameId || 'spy'));
     emitRoom(room);
     return { room: publicRoom(room, socket.data.playerId, { adPolicy: getRoomAdPolicy(room) }) };
@@ -489,28 +562,41 @@ io.on('connection', (socket) => {
       const hasPartyPass = profile.partyPasses?.some((pass) => pass.activeUntil > Date.now());
       const freeDictionaryIds = listSpyDictionaries().filter((dictionary) => dictionary.free).map((dictionary) => dictionary.id);
       const hasSpyAccess = hasTimedGameAccess(profile, 'spy') || hasPartyPass;
-      const allowed = new Set(hasSpyAccess ? listSpyDictionaries().map((dictionary) => dictionary.id) : [...(profile.ownedDictionaryIds || []), ...freeDictionaryIds]);
+      const allowed = new Set(hasSpyAccess
+        ? listSpyDictionaries().map((dictionary) => dictionary.id)
+        : listSpyDictionaries()
+          .filter((dictionary) => freeDictionaryIds.includes(dictionary.id) || (profile.ownedDictionaryIds || []).includes(dictionary.id) || hasAnyThemePass(profile, getContentThemeIds('spy', dictionary.id)))
+          .map((dictionary) => dictionary.id));
       if (settings.dictionaryIds.some((id) => !allowed.has(id))) throw new Error('Сначала приобретите этот словарь');
     }
-    if (room.gameId === 'spy' && settings.mode === 'duo') {
+    if (room.gameId === 'spy' && Number(settings.spyCount || 0) > 1) {
       const profile = getOrCreateProfile(socket.data.playerId);
-      const hasPartyPass = profile.partyPasses?.some((pass) => pass.activeUntil > Date.now());
-      if (!hasTimedGameAccess(profile, 'spy') && !hasPartyPass) throw new Error('Режим «Два шпиона» доступен в PRO, Spy Pass или WeekendPass');
+      if (!hasTimedGameAccess(profile, 'spy')) throw new Error('Больше одного шпиона доступно в PRO, WeekendPass или Spy Pass');
     }
     if (room.gameId === 'alias' && settings.dictionaryIds) {
       const profile = getOrCreateProfile(socket.data.playerId);
       const hasPartyPass = profile.partyPasses?.some((pass) => pass.activeUntil > Date.now());
       const hasAliasAccess = hasTimedGameAccess(profile, 'alias') || hasPartyPass;
       const freeIds = aliasDictionaryPreview.filter((dictionary) => dictionary.free).map((dictionary) => dictionary.id);
-      const allowed = new Set(hasAliasAccess ? aliasDictionaryPreview.map((dictionary) => dictionary.id) : freeIds);
-      if (settings.dictionaryIds.some((id) => !allowed.has(id))) throw new Error('Этот набор Alias доступен в Alias Pass, WeekendPass или PRO');
+      const allowed = new Set(hasAliasAccess
+        ? aliasDictionaryPreview.map((dictionary) => dictionary.id)
+        : aliasDictionaryPreview
+          .filter((dictionary) => freeIds.includes(dictionary.id) || hasAnyThemePass(profile, getContentThemeIds('alias', dictionary.id)))
+          .map((dictionary) => dictionary.id));
+      if (settings.dictionaryIds.some((id) => !allowed.has(id))) throw new Error('Этот набор Alias доступен в Alias Pass, WeekendPass, тематическом пропуске или PRO');
     }
     if (room.gameId === 'bunker' && settings.contentPackId) {
       const profile = getOrCreateProfile(socket.data.playerId);
       const hasPartyPass = profile.partyPasses?.some((pass) => pass.activeUntil > Date.now());
       const hasBunkerAccess = hasTimedGameAccess(profile, 'bunker') || hasPartyPass;
       const pack = bunkerContentPacks.find((item) => item.id === settings.contentPackId);
-      if (pack && !pack.free && pack.tier !== 'free' && !hasBunkerAccess) throw new Error('Этот сценарий Бункера доступен в Bunker Pass, WeekendPass или PRO');
+      if (pack && !pack.free && pack.tier !== 'free' && !hasBunkerAccess && !hasAnyThemePass(profile, getContentThemeIds('bunker', pack.id))) throw new Error('Этот сценарий Бункера доступен в Bunker Pass, WeekendPass, тематическом пропуске или PRO');
+    }
+    if (room.gameId === 'truthdare' && settings.deck) {
+      const profile = getOrCreateProfile(socket.data.playerId);
+      const deck = truthDareDecks.find((item) => item.id === settings.deck);
+      const hasDeckAccess = hasTimedGameAccess(profile, 'truthdare') || hasAnyThemePass(profile, getContentThemeIds('truthdare', deck?.id));
+      if (deck && !deck.free && deck.tier !== 'free' && !hasDeckAccess) throw new Error('Этот набор доступен в тематическом пропуске или PRO');
     }
     updateRoomSettings(room, settings);
     emitRoom(room);
@@ -575,6 +661,17 @@ io.on('connection', (socket) => {
       room.round = createBunkerRound(room);
       room.scores = { saved: room.players.length, eliminated: 0 };
       track('round_started', { gameId: 'bunker', roomId: room.id, playersCount: room.players.length });
+      room.state = 'playing';
+      emitRoom(room);
+      return {};
+    }
+    if (room.gameId === 'truthdare') {
+      assertTruthDareAccess(socket.data.playerId);
+      if (room.players.length < truthDareDefinition.minPlayers) throw new Error('Нужно минимум 2 игрока');
+      if (!room.players.every((player) => player.ready)) throw new Error('Не все игроки готовы');
+      room.scores = Object.fromEntries(room.players.map((player) => [player.id, room.scores?.[player.id] || 0]));
+      room.round = createTruthDareRound(room);
+      track('round_started', { gameId: 'truthdare', roomId: room.id, playersCount: room.players.length });
       room.state = 'playing';
       emitRoom(room);
       return {};
@@ -679,7 +776,7 @@ io.on('connection', (socket) => {
   socket.on('create_order', ({ type, productId, months }, callback) => replyWith(callback, async () => {
     checkRate(socket, 'create_order', 20, 60000);
     const currentProfile = getOrCreateProfile(socket.data.playerId);
-    if (currentProfile.accountType === 'guest') throw new Error('Войдите или зарегистрируйтесь, чтобы оформить покупку.');
+    if (!currentProfile.email) throw new Error('Войдите или зарегистрируйтесь, чтобы оформить покупку.');
     if (!yooKassaConfig().enabled && !demoCheckoutEnabled()) throw new Error('Оплата временно недоступна. Напишите в поддержку, если покупка нужна сейчас.');
     const { profile, order } = createOrder(socket.data.playerId, { type, productId, months });
     const payment = await createYooKassaPayment(profile, order);
@@ -847,15 +944,28 @@ io.on('connection', (socket) => {
     return {};
   }));
 
+  socket.on('truthdare_mark_prompt', ({ roomId, result }, callback) => replyWith(callback, () => {
+    checkRate(socket, 'truthdare_mark_prompt', 30, 10000);
+    const room = getRoom(roomId);
+    requireRoomPlayer(room, socket.data.playerId);
+    if (room?.gameId !== 'truthdare' || room.round?.phase !== 'truthdare_turn') throw new Error('Сейчас нет активного задания');
+    if (!['done', 'skip'].includes(result)) throw new Error('Непонятный результат задания');
+    advanceTruthDareRound(room, result);
+    track('round_finished', { gameId: 'truthdare', reason: result, roomId: room.id });
+    emitRoom(room);
+    return {};
+  }));
+
   socket.on('next_round', ({ roomId }, callback) => replyWith(callback, () => {
     const room = getRoom(roomId);
     if (!room || room.hostId !== socket.data.playerId || room.state !== 'round_result') throw new Error('Действие недоступно');
     room.players.forEach((player) => { player.ready = player.id === room.hostId; });
     if (room.gameId === 'alias') room.round = createAliasRound(room);
     else if (room.gameId === 'bunker') continueBunkerRound(room);
+    else if (room.gameId === 'truthdare') room.round = createTruthDareRound(room);
     else room.round = null;
     room.state = 'lobby';
-    if (room.gameId === 'alias' || room.gameId === 'bunker') room.state = 'playing';
+    if (room.gameId === 'alias' || room.gameId === 'bunker' || room.gameId === 'truthdare') room.state = 'playing';
     emitRoom(room);
     return {};
   }));
@@ -870,12 +980,13 @@ io.on('connection', (socket) => {
   socket.on('new_match', ({ roomId }, callback) => replyWith(callback, () => {
     const room = getRoom(roomId);
     if (!room || room.hostId !== socket.data.playerId || room.state !== 'match_result') throw new Error('Действие недоступно');
-    room.scores = room.gameId === 'alias' ? { team_1: 0, team_2: 0 } : room.gameId === 'bunker' ? { saved: 0, eliminated: 0 } : { civilians: 0, spies: 0 };
+    room.scores = room.gameId === 'alias' ? { team_1: 0, team_2: 0 } : room.gameId === 'bunker' ? { saved: 0, eliminated: 0 } : room.gameId === 'truthdare' ? {} : { civilians: 0, spies: 0 };
     if (room.gameId === 'alias') {
       room.aliasTeams = createAliasTeams(room.players.filter((player) => player.online));
       room.usedAliasWords = [];
       room.aliasTurnIndex = -1;
     }
+    if (room.gameId === 'truthdare') room.truthDareTurnIndex = -1;
     room.players.forEach((player) => { player.ready = player.id === room.hostId; });
     room.round = null;
     room.state = 'lobby';
@@ -896,6 +1007,12 @@ io.on('connection', (socket) => {
           if (bunkerActiveContestants(room).length <= room.round.shelterCapacity) finishBunkerByCapacity(room);
           else if (bunkerActiveContestants(room).length < bunkerDefinition.minPlayers - 1) cancelRound(room);
           else maybeAdvanceRound(room);
+        } else if (room.gameId === 'truthdare') {
+          if (room.players.length < truthDareDefinition.minPlayers) cancelRound(room);
+          else {
+            if (room.round?.activePlayerId === socket.data.playerId) room.round = createTruthDareRound(room);
+            emitRoom(room);
+          }
         } else if (leavingWasSpy) setRoundResult(room, 'civilians', 'spy_left');
         else if (room.players.length < spyDefinition.minPlayers) cancelRound(room);
         else maybeAdvanceRound(room);
@@ -941,4 +1058,3 @@ restoreProfiles(await loadProfileSnapshot());
 await connectAnalyticsPersistence();
 await restoreAnalyticsSnapshot();
 server.listen(port, '0.0.0.0', () => console.log(`GameHubParty server: http://localhost:${port}`));
-

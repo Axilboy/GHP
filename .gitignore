@@ -2,6 +2,7 @@ node_modules
 dist
 artifacts
 .env
+.env.development.local
 .npm-cache
 .deploy-keys
 $Recycle.Bin
@@ -13,3 +14,6 @@ AI/
 outputs/
 .claude/*
 !.claude/launch.json
+.codebase-memory/
+tmp/
+work/

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { emit } from '../socket';
 import { getOrCreateDisplayName, getPlayerId } from '../identity';
 import { getSubscriptionStatus } from '../profileStatus';
-import { APP_VERSION } from '../version';
+import { APP_DISPLAY_VERSION } from '../version';
 import { currentPath, trackClientEvent } from './helpers';
 
 export function FeedbackModal({ close }) {
@@ -95,7 +95,7 @@ export function Header({ right, navigate, gameTitle, brandTheme = 'ghp' }) {
   const go = (nextView) => {
     setMenuOpen(false);
     if (navigate) navigate(nextView);
-    else location.assign({ home: '/', spy: '/games/spy', alias: '/games/alias', bunker: '/games/bunker', profile: '/profile', store: '/store', vk: '/vk', admin: '/admin', demo: '/demo', privacy: '/privacy', terms: '/terms', contacts: '/contacts', refund: '/refund' }[nextView]);
+    else location.assign({ home: '/', spy: '/games/spy', alias: '/games/alias', bunker: '/games/bunker', profile: '/profile', store: '/store', vk: '/vk', admin: '/admin', demo: '/demo', privacy: '/privacy', terms: '/terms', contacts: '/contacts' }[nextView]);
   };
   const menuStatus = getSubscriptionStatus(menuProfile);
   const openFeedback = () => {
@@ -112,7 +112,7 @@ export function Header({ right, navigate, gameTitle, brandTheme = 'ghp' }) {
 }
 
 export function VersionBadge() {
-  return <span className="badge version-badge">v{APP_VERSION}</span>;
+  return <span className="badge version-badge">v{APP_DISPLAY_VERSION}</span>;
 }
 
 export function SubscriptionBadge({ profile }) {

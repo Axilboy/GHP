@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { sessionStore } from '../browserStorage';
 import { Header } from '../shared/Header';
 import { ErrorText } from '../shared/ui';
-import { APP_VERSION } from '../version';
+import { APP_DISPLAY_VERSION } from '../version';
 import { screenshotFolders } from './releaseNotes';
 
 export function AdminPage({ navigate }) {
@@ -138,10 +138,10 @@ export function AdminPage({ navigate }) {
       <div className="demo-links"><button onClick={() => navigate('demo')}>Статус и обновления</button><button onClick={() => navigate('store')}>Магазин</button><button onClick={() => navigate('profile')}>Профиль</button><button onClick={() => navigate('vk')}>VK</button></div>
     </section>
     <section className="section wrap">
-      <div className="section-title"><h2>Статус проекта</h2><span className="badge live">v{APP_VERSION}</span></div>
+      <div className="section-title"><h2>Статус проекта</h2><span className="badge live">v{APP_DISPLAY_VERSION}</span></div>
       <div className="admin-status-grid">
         <article><b>Шпион</b><span>Лобби, роли, таймер, голосование, угадывание, результат и профиль.</span></article>
-        <article><b>Платежка</b><span>YooKassa, возврат после оплаты, webhook, выдача доступа и история покупок.</span></article>
+        <article><b>Платежка</b><span>YooKassa, возвращение на сайт после оплаты, webhook, выдача доступа и история покупок.</span></article>
         <article><b>Админка</b><span>Закрытый вход по прямому URL, папки скринов, чеклисты проверки.</span></article>
         <article><b>Тесты</b><span>Серверные тесты, автотесты сценариев и production-сборка перед деплоем.</span></article>
       </div>
@@ -230,6 +230,7 @@ function adminProductOptions(products = {}) {
     ...(products.themes || []).filter((item) => !item.free).map((item) => ({ value: `theme:${item.id}`, label: `Тема · ${item.name}` })),
     ...(products.subscriptions || []).map((item) => ({ value: `subscription:${item.id}`, label: `Подписка · ${item.name}` })),
     ...(products.gamePasses || []).map((item) => ({ value: `game_pass:${item.id}`, label: `Game Pass · ${item.name}` })),
+    ...(products.themePasses || []).map((item) => ({ value: `theme_pass:${item.id}`, label: `Тема · ${item.name}` })),
     ...(products.extras || []).map((item) => ({ value: `${item.type}:${item.id}`, label: `Дополнительно · ${item.name}` })),
   ];
 }
@@ -249,7 +250,7 @@ function AdminPlayers({ profiles, products, manageAccess, removePurchase }) {
     const value = selected[profile.id] || defaultValue;
     const [type, productId] = value.split(':');
     const payload = { type, productId };
-    if (type === 'subscription' || type === 'game_pass') payload.months = Number(duration[profile.id]) || 1;
+    if (type === 'subscription' || type === 'game_pass' || type === 'theme_pass') payload.months = Number(duration[profile.id]) || 1;
     if (type === 'party_pass') payload.hours = Number(duration[profile.id]) || 24;
     return payload;
   };
@@ -271,11 +272,12 @@ function AdminPlayers({ profiles, products, manageAccess, removePurchase }) {
           {profile.subscription?.activeUntil && <span>до {formatAdminDate(profile.subscription.activeUntil)}</span>}
           {profile.customDictionaryOwned && <span>свой словарь</span>}
           {profile.gamePasses?.filter((pass) => pass.activeUntil > Date.now()).map((pass) => <span key={pass.id}>{pass.gameId} до {formatAdminDate(pass.activeUntil)}</span>)}
+          {profile.themePasses?.filter((pass) => pass.activeUntil > Date.now()).map((pass) => <span key={pass.id}>{pass.name || pass.themeId} до {formatAdminDate(pass.activeUntil)}</span>)}
           {activePass && <span>WeekendPass до {formatAdminDate(activePass.activeUntil)}</span>}
         </div>
         <div className="admin-access-form">
           <select value={value} onChange={(event) => setSelected((current) => ({ ...current, [profile.id]: event.target.value }))}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
-          {(type === 'subscription' || type === 'game_pass' || type === 'party_pass') && <input type="number" min="1" max={type === 'party_pass' ? '72' : '12'} value={duration[profile.id] || (type === 'party_pass' ? 24 : 1)} onChange={(event) => setDuration((current) => ({ ...current, [profile.id]: event.target.value }))} aria-label={type === 'party_pass' ? 'Часы' : 'Месяцы'} />}
+          {(type === 'subscription' || type === 'game_pass' || type === 'theme_pass' || type === 'party_pass') && <input type="number" min="1" max={type === 'party_pass' ? '72' : '12'} value={duration[profile.id] || (type === 'party_pass' ? 24 : 1)} onChange={(event) => setDuration((current) => ({ ...current, [profile.id]: event.target.value }))} aria-label={type === 'party_pass' ? 'Часы' : 'Месяцы'} />}
           <button onClick={() => manageAccess(profile, 'grant', buildPayload(profile))}>Выдать</button>
           <button className="danger" onClick={() => manageAccess(profile, 'revoke', buildPayload(profile))}>Забрать</button>
         </div>

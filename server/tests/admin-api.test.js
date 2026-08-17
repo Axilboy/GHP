@@ -121,8 +121,11 @@ test('admin overview shows rooms and can confirm demo orders', { timeout: 15000 
 });
 
 test('email account is required before creating orders', { timeout: 15000 }, async () => {
-  const authPort = 3212;
+  const authPort = 7300 + Math.floor(Math.random() * 1000);
   const authUrl = `http://127.0.0.1:${authPort}`;
+  const suffix = `${process.pid}-${Date.now()}`;
+  const playerId = `email-buyer-${suffix}`;
+  const email = `buyer-${suffix}@example.com`;
   const server = spawn(process.execPath, ['server/index.js'], {
     cwd: process.cwd(),
     env: { ...process.env, PORT: String(authPort), NODE_ENV: 'test' },
@@ -132,12 +135,13 @@ test('email account is required before creating orders', { timeout: 15000 }, asy
   try {
     assert.equal((await waitForServer(`${authUrl}/api/health`)).status, 200);
     await new Promise((resolve) => socket.once('connect', resolve));
-    socket.emit('identify', { playerId: 'email-buyer' });
+    socket.emit('identify', { playerId });
     await assert.rejects(request(socket, 'create_order', { type: 'dictionary', productId: 'city' }), /Войдите или зарегистрируйтесь/);
 
-    const verifyData = await signInByEmail(authUrl, 'email-buyer', 'buyer@example.com', 'Buyer');
+    const verifyData = await signInByEmail(authUrl, playerId, email, 'Buyer');
+    assert.equal(verifyData.created, true);
     assert.equal(verifyData.profile.accountType, 'email');
-    assert.equal(verifyData.profile.email, 'buyer@example.com');
+    assert.equal(verifyData.profile.email, email);
 
     socket.emit('identify', { playerId: verifyData.account.id });
     const order = await request(socket, 'create_order', { type: 'dictionary', productId: 'city' });
@@ -149,9 +153,9 @@ test('email account is required before creating orders', { timeout: 15000 }, asy
 });
 
 test('yookassa payment link, return sync and webhook unlock an order', { timeout: 15000 }, async () => {
-  const yookassaPort = 3213;
+  const yookassaPort = 8300 + Math.floor(Math.random() * 500);
   const yookassaUrl = `http://127.0.0.1:${yookassaPort}`;
-  const appPort = 3214;
+  const appPort = 8800 + Math.floor(Math.random() * 500);
   const appUrl = `http://127.0.0.1:${appPort}`;
   let savedPayment = null;
   let savedPaymentRequest = null;

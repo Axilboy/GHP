@@ -1,23 +1,28 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { socket, emit } from './socket';
 import { getOrCreateDisplayName, getPlayerId, getSessionKey } from './identity';
-import { localStore } from './browserStorage';
+import { localStore, sessionStore } from './browserStorage';
 import { getSavedVkLaunch, initVkBridge, readVkLaunchParams, saveVkLaunch, verifyVkLaunch } from './vk';
 import { initYandexMetrika, reachMetrikaGoal } from './yandexMetrika';
-import { currentPath, isVkHost, normalizePausedSession, readSavedSession, saveActiveSession, trackClientEvent } from './shared/helpers';
-import { SessionExitModal, SessionReturnBanner } from './shared/ui';
-import { AdminPage } from './screens/Admin';
-import { DemoPage } from './screens/Demo';
-import { Game } from './screens/GameRouter';
+import { currentPath, hashAnalyticsRoomId, isVkHost, normalizePausedSession, readSavedSession, saveActiveSession, shouldTrackReturnVisit, trackClientEvent } from './shared/helpers';
+import { LoadingScreen, SessionExitModal, SessionReturnBanner } from './shared/ui';
 import { ProjectLanding } from './screens/Home';
-import { Lobby } from './screens/Lobby';
-import { LegalPage } from './screens/Legal';
-import { ProfileScreen } from './screens/Profile';
-import { StoreScreen } from './screens/Store';
-import { VkMiniAppPage } from './screens/Vk';
-import { AliasLanding } from './games/alias/Alias';
-import { BunkerLanding } from './games/bunker/Bunker';
-import { SpyLanding } from './games/spy/Spy';
+
+// Домашний экран — в основном бандле (первый рендер). Остальное грузится по требованию:
+// каждая игра, магазин, профиль и служебные экраны — отдельными чанками с эффектом загрузки.
+const namedLazy = (loader, name) => lazy(() => loader().then((module) => ({ default: module[name] })));
+const AdminPage = namedLazy(() => import('./screens/Admin'), 'AdminPage');
+const DemoPage = namedLazy(() => import('./screens/Demo'), 'DemoPage');
+const Game = namedLazy(() => import('./screens/GameRouter'), 'Game');
+const Lobby = namedLazy(() => import('./screens/Lobby'), 'Lobby');
+const LegalPage = namedLazy(() => import('./screens/Legal'), 'LegalPage');
+const ProfileScreen = namedLazy(() => import('./screens/Profile'), 'ProfileScreen');
+const StoreScreen = namedLazy(() => import('./screens/Store'), 'StoreScreen');
+const VkMiniAppPage = namedLazy(() => import('./screens/Vk'), 'VkMiniAppPage');
+const AliasLanding = namedLazy(() => import('./games/alias/Alias'), 'AliasLanding');
+const BunkerLanding = namedLazy(() => import('./games/bunker/Bunker'), 'BunkerLanding');
+const SpyLanding = namedLazy(() => import('./games/spy/Spy'), 'SpyLanding');
+const TruthDareLanding = namedLazy(() => import('./games/truthdare/TruthDare'), 'TruthDareLanding');
 
 export default function App() {
   const playerId = useMemo(getPlayerId, []);
@@ -28,6 +33,7 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [joinOpen, setJoinOpen] = useState(() => Boolean(new URLSearchParams(location.search).get('room')));
   const [error, setError] = useState('');
+  const [pending, setPending] = useState('');
   const [now, setNow] = useState(Date.now());
   const [pausedSession, setPausedSession] = useState(() => normalizePausedSession(getSessionKey(), getPlayerId()));
   const [exitIntent, setExitIntent] = useState(null);
@@ -37,6 +43,7 @@ export default function App() {
     if (path === '/games/spy') return 'spy';
     if (path === '/games/alias') return 'alias';
     if (path === '/games/bunker') return 'bunker';
+    if (path === '/games/truth-or-dare') return 'truthdare';
     if (path === '/profile') return 'profile';
     if (path === '/store') return 'store';
     if (path === '/vk') return 'vk';
@@ -45,7 +52,6 @@ export default function App() {
     if (path === '/privacy') return 'privacy';
     if (path === '/terms') return 'terms';
     if (path === '/contacts') return 'contacts';
-    if (path === '/refund') return 'refund';
     if (isVkHost()) return 'vk';
     return 'home';
   });
@@ -55,6 +61,7 @@ export default function App() {
 
   useEffect(() => {
     initYandexMetrika();
+    if (shouldTrackReturnVisit()) trackClientEvent('return_visit', { page: view });
   }, []);
 
   useEffect(() => {
@@ -74,6 +81,15 @@ export default function App() {
         return;
       }
       setRoom(nextRoom);
+      const gameStartedKey = `gamehubparty_game_started:${nextRoom.id}`;
+      if (nextRoom.state !== 'lobby' && nextRoom.round && !sessionStore.getItem(gameStartedKey)) {
+        sessionStore.setItem(gameStartedKey, '1');
+        hashAnalyticsRoomId(nextRoom.id).then((roomIdHash) => trackClientEvent('game_started', {
+          game_type: nextRoom.gameId || 'spy',
+          players_count: (nextRoom.players || []).filter((player) => player.online).length,
+          room_id_hash: roomIdHash,
+        })).catch(() => {});
+      }
       if (!nextRoom.round) setCard(null);
       if (nextRoom.state === 'round_result' || nextRoom.state === 'match_result') {
         emit('get_profile').then((result) => setProfile(result.profile)).catch(() => {});
@@ -111,6 +127,7 @@ export default function App() {
       spy: 'Игра Шпион онлайн бесплатно — GameHubParty',
       alias: 'Alias онлайн для компании — GameHubParty',
       bunker: 'Бункер онлайн для компании — GameHubParty',
+      truthdare: 'Правда или действие онлайн — GameHubParty',
       profile: 'Профиль игрока — GameHubParty',
       store: 'Магазин игр — GameHubParty',
       vk: 'GameHubParty во ВКонтакте',
@@ -119,7 +136,6 @@ export default function App() {
       privacy: 'Политика конфиденциальности — GameHubParty',
       terms: 'Пользовательское соглашение — GameHubParty',
       contacts: 'Контакты и реквизиты — GameHubParty',
-      refund: 'Возвраты — GameHubParty',
     };
     document.title = titles[view] || titles.home;
     const descriptions = {
@@ -127,6 +143,7 @@ export default function App() {
       spy: 'Играйте в Шпиона онлайн бесплатно с друзьями. Без карточек и ведущего: роли, локации, таймер и голосование уже внутри.',
       alias: 'Alias онлайн для компании: объясняйте слова, собирайте команды и играйте без карточек и подготовки.',
       bunker: 'Играйте в Бункер онлайн: карточки выживших, катастрофа, убежище, обсуждение и голосование без ведущего.',
+      truthdare: 'Правда или действие онлайн для компании: карточки вопросов и заданий, случайный игрок и быстрый темп без ведущего.',
       profile: 'Профиль игрока GameHubParty.',
       store: 'Дополнительные наборы и локации для игр GameHubParty.',
       vk: 'Подготовка GameHubParty к запуску в VK Mini Apps.',
@@ -135,7 +152,6 @@ export default function App() {
       privacy: 'Политика конфиденциальности GameHubParty.',
       terms: 'Пользовательское соглашение GameHubParty.',
       contacts: 'Контакты, поддержка и реквизиты GameHubParty для покупателей и платежной модерации.',
-      refund: 'Условия возврата цифровых товаров и доступа GameHubParty.',
     };
     let description = document.querySelector('meta[name="description"]');
     if (!description) {
@@ -144,12 +160,39 @@ export default function App() {
       document.head.append(description);
     }
     description.content = descriptions[view] || descriptions.home;
+    const paths = { home: '/', spy: '/games/spy', alias: '/games/alias', bunker: '/games/bunker', truthdare: '/games/truth-or-dare', profile: '/profile', store: '/store', vk: '/vk', admin: '/admin', demo: '/demo', privacy: '/privacy', terms: '/terms', contacts: '/contacts' };
+    const canonicalUrl = `https://gamehubparty.ru${paths[view] || '/'}`;
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.rel = 'canonical';
+      document.head.append(canonical);
+    }
+    canonical.href = canonicalUrl;
+    let robots = document.querySelector('meta[name="robots"]');
+    if (!robots) {
+      robots = document.createElement('meta');
+      robots.name = 'robots';
+      document.head.append(robots);
+    }
+    robots.content = ['profile', 'admin', 'demo', 'vk'].includes(view) ? 'noindex,follow' : 'index,follow';
+    const ogUrl = document.querySelector('meta[property="og:url"]');
+    if (ogUrl) ogUrl.content = canonicalUrl;
   }, [view]);
 
   useEffect(() => {
     trackClientEvent('page_view', { page: view });
     if (view === 'store') trackClientEvent('open_store', { page: 'store' });
   }, [view]);
+
+  useEffect(() => {
+    const isSafeUpdatePoint = (!room && view === 'home') || room?.state === 'lobby';
+    if (!isSafeUpdatePoint) return undefined;
+    // Проверяем обновление только между игровыми действиями: на главной и при входе в лобби.
+    // Нулевая задержка гарантирует, что глобальный обработчик уже подключён после первого рендера.
+    const timer = window.setTimeout(() => window.dispatchEvent(new Event('ghp:check-version')), 0);
+    return () => window.clearTimeout(timer);
+  }, [room?.id, room?.state, view]);
 
   async function action(name, payload = {}) {
     setError('');
@@ -162,12 +205,28 @@ export default function App() {
   }
 
   async function create(name, gameId = 'spy') {
-    const result = await emit('create_room', { playerId, name, gameId });
-    setRoom(result.room);
-    saveActiveSession(sessionKey, playerId, result.room);
-    setPausedSession(null);
-    reachMetrikaGoal('room_created', { gameId });
+    setPending('create');
+    try {
+      const result = await emit('create_room', { playerId, name, gameId });
+      setRoom(result.room);
+      saveActiveSession(sessionKey, playerId, result.room);
+      setPausedSession(null);
+      reachMetrikaGoal('room_created', { game_type: gameId });
+    } finally {
+      setPending('');
+    }
   }
+
+  // Чанк лобби качаем заранее, пока человек читает лендинг, — после «Начать игру» его ждать уже не нужно.
+  useEffect(() => {
+    const prefetch = () => { import('./screens/Lobby').catch(() => {}); };
+    if (typeof requestIdleCallback === 'function') {
+      const id = requestIdleCallback(prefetch, { timeout: 2500 });
+      return () => cancelIdleCallback(id);
+    }
+    const id = setTimeout(prefetch, 1500);
+    return () => clearTimeout(id);
+  }, []);
 
   useEffect(() => {
     const startRoom = () => create(getOrCreateDisplayName()).catch((nextError) => setError(nextError.message));
@@ -182,7 +241,7 @@ export default function App() {
     setPausedSession(null);
     setJoinOpen(false);
     history.replaceState({}, '', location.pathname);
-    reachMetrikaGoal('room_joined', { gameId: result.room?.gameId || 'spy' });
+    reachMetrikaGoal('room_joined', { game_type: result.room?.gameId || 'spy' });
   }
 
   function pauseRoomSession(targetView = 'home') {
@@ -239,7 +298,7 @@ export default function App() {
   }
 
   function goToView(nextView) {
-    const paths = { home: '/', spy: '/games/spy', alias: '/games/alias', bunker: '/games/bunker', profile: '/profile', store: '/store', vk: '/vk', admin: '/admin', demo: '/demo', privacy: '/privacy', terms: '/terms', contacts: '/contacts', refund: '/refund' };
+    const paths = { home: '/', spy: '/games/spy', alias: '/games/alias', bunker: '/games/bunker', truthdare: '/games/truth-or-dare', profile: '/profile', store: '/store', vk: '/vk', admin: '/admin', demo: '/demo', privacy: '/privacy', terms: '/terms', contacts: '/contacts' };
     history.pushState({}, '', paths[nextView] || '/');
     setView(nextView);
     scrollTo({ top: 0, behavior: 'smooth' });
@@ -257,7 +316,7 @@ export default function App() {
     {!room && pausedSession?.pausedUntil > now && <SessionReturnBanner session={pausedSession} now={now} returnToSession={returnToSession} closeSavedSession={closeSavedSession} />}
     {exitIntent && <SessionExitModal close={() => setExitIntent(null)} confirm={confirmLeaveIntent} />}
   </>;
-  const withSessionOverlay = (screen) => <>{screen}{sessionOverlay}</>;
+  const withSessionOverlay = (screen) => <><Suspense fallback={<LoadingScreen />}>{screen}</Suspense>{sessionOverlay}</>;
 
   if (!room) {
     if (view === 'profile') return withSessionOverlay(<ProfileScreen navigate={navigate} profile={profile} setProfile={setProfile} />);
@@ -268,11 +327,11 @@ export default function App() {
     if (view === 'privacy') return withSessionOverlay(<LegalPage type="privacy" navigate={navigate} />);
     if (view === 'terms') return withSessionOverlay(<LegalPage type="terms" navigate={navigate} />);
     if (view === 'contacts') return withSessionOverlay(<LegalPage type="contacts" navigate={navigate} />);
-    if (view === 'refund') return withSessionOverlay(<LegalPage type="refund" navigate={navigate} />);
     if (view === 'spy') return withSessionOverlay(<SpyLanding create={create} join={() => setJoinOpen(true)} joinOpen={joinOpen} closeJoin={() => setJoinOpen(false)} onJoin={join} error={error} navigate={navigate} vkLaunch={vkLaunch} profile={profile} />);
     if (view === 'alias') return withSessionOverlay(<AliasLanding create={create} join={() => setJoinOpen(true)} joinOpen={joinOpen} closeJoin={() => setJoinOpen(false)} onJoin={join} error={error} navigate={navigate} profile={profile} />);
     if (view === 'bunker') return withSessionOverlay(<BunkerLanding create={create} join={() => setJoinOpen(true)} joinOpen={joinOpen} closeJoin={() => setJoinOpen(false)} onJoin={join} error={error} navigate={navigate} profile={profile} />);
-    return withSessionOverlay(<ProjectLanding create={create} navigate={navigate} join={() => setJoinOpen(true)} joinOpen={joinOpen} closeJoin={() => setJoinOpen(false)} onJoin={join} vkLaunch={vkLaunch} profile={profile} />);
+    if (view === 'truthdare') return withSessionOverlay(<TruthDareLanding create={create} join={() => setJoinOpen(true)} joinOpen={joinOpen} closeJoin={() => setJoinOpen(false)} onJoin={join} error={error} navigate={navigate} profile={profile} />);
+    return withSessionOverlay(<ProjectLanding create={create} navigate={navigate} join={() => setJoinOpen(true)} joinOpen={joinOpen} closeJoin={() => setJoinOpen(false)} onJoin={join} vkLaunch={vkLaunch} profile={profile} pending={pending} />);
   }
 
   if (room.state === 'lobby') {

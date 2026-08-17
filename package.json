@@ -1,7 +1,7 @@
 {
   "name": "gamehubparty",
   "private": true,
-  "version": "0.3.26",
+  "version": "0.5.1",
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm:dev:server\" \"npm:dev:web\"",
@@ -11,13 +11,15 @@
     "device-lab:test": "node tools/device-lab/server.mjs https://test.gamehubparty.ru",
     "dev:lab": "concurrently \"npm:dev\" \"npm:device-lab\"",
     "build": "vite build --configLoader runner",
+    "postbuild": "node tools/postbuild-clean.mjs",
     "start": "node server/index.js",
-    "test": "node --test server/**/*.test.js tools/device-lab/*.test.js",
+    "test": "node --test --test-concurrency=1 server/**/*.test.js tools/device-lab/*.test.js",
     "test:all": "npm run test && npm run test:auto",
     "test:auto": "npm run build && node tools/autotest/run.mjs",
     "test:auto:test-server": "node tools/autotest/run.mjs --target=https://test.gamehubparty.ru"
   },
   "dependencies": {
+    "@openpanel/web": "^1.1.0",
     "@vkontakte/vk-bridge": "^3.0.2",
     "express": "^5.1.0",
     "redis": "^5.8.0",
@@ -30,6 +32,7 @@
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "sharp": "^0.35.3",
     "socket.io-client": "^4.8.1",
     "vite": "^6.0.5"
   }

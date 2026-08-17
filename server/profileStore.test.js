@@ -8,6 +8,7 @@ import {
   createOrder,
   getOrCreateProfile,
   hasAdFreeAccess,
+  hasActiveThemePass,
   unlockBundle,
   unlockCustomDictionary,
   unlockDemoDictionary,
@@ -77,6 +78,23 @@ test('game pass removes ads only for its own game', () => {
   assert.equal(hasAdFreeAccess(profile, Date.now(), 'alias'), true);
   assert.equal(hasAdFreeAccess(profile, Date.now(), 'spy'), false);
   assert.equal(hasAdFreeAccess(profile, Date.now(), 'bunker'), false);
+});
+
+test('theme pass opens one themed content family for a month', () => {
+  const { order } = createOrder('theme-pass-order-test', { type: 'theme_pass', productId: 'theme_couples', months: 1 });
+  const { profile } = confirmDemoOrder('theme-pass-order-test', order.id);
+  assert.equal(profile.themePasses[0].themeId, 'couples');
+  assert.ok(profile.themePasses[0].activeUntil > Date.now());
+  assert.equal(hasActiveThemePass(profile, 'couples'), true);
+  assert.equal(hasActiveThemePass(profile, 'drinks'), false);
+});
+
+test('franchise theme pass can be purchased as its own access', () => {
+  const { order } = createOrder('franchise-theme-pass-order-test', { type: 'theme_pass', productId: 'theme_harry_potter', months: 1 });
+  assert.equal(order.title, 'Гарри Поттер Pass на месяц');
+  const { profile } = confirmDemoOrder('franchise-theme-pass-order-test', order.id);
+  assert.equal(hasActiveThemePass(profile, 'harry_potter'), true);
+  assert.equal(hasActiveThemePass(profile, 'lotr'), false);
 });
 
 test('party pass creates a temporary room entitlement', () => {

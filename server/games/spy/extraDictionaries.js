@@ -8,6 +8,7 @@ function dictionary(id, name, description, category, priceRub, cover, items) {
 
 const commonRoles = ['Посетитель', 'Сотрудник', 'Охранник', 'Новичок', 'Организатор', 'Фотограф'];
 const more = (prefix, names) => names.map((name, index) => [`${prefix}_${index + 1}`, name, commonRoles]);
+const franchise = (prefix, roles, names) => names.map((name, index) => [`${prefix}_${index + 1}`, name, roles]);
 
 export const CITY_SPY_DICTIONARY = dictionary('city', 'Городская жизнь', 'Современные места, знакомые каждому жителю города.', 'Город', 99, 'city', [
   ['coworking', 'Коворкинг', ['Фрилансер', 'Администратор', 'Дизайнер', 'Курьер', 'Предприниматель', 'Уборщик']],
@@ -31,6 +32,26 @@ export const POP_SPY_DICTIONARY = dictionary('pop', 'Кино и поп-куль
 
 export const FANTASY_SPY_DICTIONARY = dictionary('fantasy', 'Магия и легенды', 'Фэнтезийные места, где даже мирным нельзя доверять.', 'Фэнтези', 149, 'fantasy', [
   ...more('fantasy', ['Школа магии', 'Пещера дракона', 'Королевский замок', 'Рынок ведьм', 'Зачарованный лес', 'Башня волшебника', 'Пиратский остров', 'Древний храм', 'Гильдия героев', 'Портал миров']),
+]);
+
+export const HARRY_POTTER_SPY_DICTIONARY = dictionary('harry_potter', 'Гарри Поттер', 'Хогвартс, квиддич, Косой переулок и другие места для поттероманов.', 'Франшизы', 149, 'fantasy', [
+  ...franchise('harry_potter', ['Ученик', 'Профессор', 'Староста', 'Призрак', 'Аврор', 'Смотритель'], ['Большой зал Хогвартса', 'Класс зельеварения', 'Поле для квиддича', 'Хогсмид', 'Косой переулок', 'Запретный лес', 'Платформа 9 3/4', 'Министерство магии', 'Гостиная Гриффиндора', 'Подземелье Слизерина', 'Библиотека Хогвартса', 'Астрономическая башня']),
+]);
+
+export const LOTR_SPY_DICTIONARY = dictionary('lotr', 'Властелин колец', 'Средиземье, отряд, кольцо и места, где каждый может оказаться шпионом Саурона.', 'Франшизы', 149, 'fantasy', [
+  ...franchise('lotr', ['Хоббит', 'Эльф', 'Гном', 'Следопыт', 'Маг', 'Воин'], ['Шир', 'Ривенделл', 'Копи Мории', 'Лес Лотлориэн', 'Рохан', 'Минас-Тирит', 'Мордор', 'Таверна в Бри', 'Изенгард', 'Одинокая гора', 'Переправа через Андуин', 'Лес энтов']),
+]);
+
+export const RETRO_MOVIES_SPY_DICTIONARY = dictionary('retro_movies', 'Ретро-кино', 'VHS, боевики, фантастика, слэшеры и культовые кино-вечера.', 'Франшизы', 129, 'pop', [
+  ...franchise('retro_movies', ['Зритель', 'Кассир', 'Режиссёр', 'Каскадёр', 'Киноман', 'Охранник'], ['Видеосалон VHS', 'Кинотеатр на полуночном сеансе', 'Съёмочная площадка боевика', 'Полицейский участок из 90-х', 'Лаборатория с неоном', 'Парк динозавров', 'Городок слэшера', 'Космический корабль из кассеты', 'Аркадный зал', 'Магазин комиксов', 'Автомастерская гонщиков', 'Заброшенный торговый центр']),
+]);
+
+export const VIDEO_GAMES_SPY_DICTIONARY = dictionary('video_games', 'Видеоигры', 'Рейды, боссы, лут, киберспорт и игровые места для своей команды.', 'Франшизы', 149, 'memes', [
+  ...franchise('video_games', ['Игрок', 'Стример', 'Тренер', 'Разработчик', 'Модератор', 'Наблюдатель'], ['Киберспорт-арена', 'Рейд в подземелье', 'Лутовая комната', 'Арена финального босса', 'Пиксельный замок', 'Космическая база', 'Гоночная трасса', 'Игровой клуб', 'Стрим-комната', 'Постапокалиптическая база', 'Город в песочнице', 'Лобби перед матчем']),
+]);
+
+export const PARTY_HOUSE_SPY_DICTIONARY = dictionary('party_house', 'Домашняя вечеринка', 'Кухня, балкон, танцпол у дивана и места, где компания быстро становится громче.', 'Вечеринка', 129, 'party', [
+  ...more('party_house', ['Кухня с закусками', 'Балкон для разговоров', 'Комната с караоке', 'Танцпол у дивана', 'Стол с настолками', 'Фотозона в коридоре', 'Дача с гирляндами', 'Гостиная после полуночи', 'Комната с приставкой', 'Крыша с пледом', 'Пицца-зона', 'Домашний бар без брендов']),
 ]);
 
 export const AFTER_DARK_SPY_DICTIONARY = dictionary('after_dark', '18+ После полуночи', 'Взрослые вечеринки, бары и места, где вопросы становятся смелее.', '18+', 179, 'after_dark', [
@@ -59,6 +80,11 @@ export const EXTRA_SPY_DICTIONARIES = [
   SECRET_SPY_DICTIONARY,
   POP_SPY_DICTIONARY,
   FANTASY_SPY_DICTIONARY,
+  HARRY_POTTER_SPY_DICTIONARY,
+  LOTR_SPY_DICTIONARY,
+  RETRO_MOVIES_SPY_DICTIONARY,
+  VIDEO_GAMES_SPY_DICTIONARY,
+  PARTY_HOUSE_SPY_DICTIONARY,
   AFTER_DARK_SPY_DICTIONARY,
   COUPLES_SPY_DICTIONARY,
   DRINKS_SPY_DICTIONARY,
@@ -69,7 +95,8 @@ export const EXTRA_SPY_DICTIONARIES = [
 export const SPY_BUNDLES = [
   { id: 'starter', name: 'Стартовый пак', description: 'Городская жизнь и Путешествия.', dictionaryIds: ['city', 'travel'], priceRub: 199, oldPriceRub: 248, cover: 'travel' },
   { id: 'adventure', name: 'Пак приключений', description: 'Совершенно секретно и Магия и легенды.', dictionaryIds: ['secret', 'fantasy'], priceRub: 249, oldPriceRub: 298, cover: 'fantasy' },
-  { id: 'party_pack', name: 'Пак для вечеринки', description: '18+, Для влюбленных и Пьянка и бар для взрослых компаний.', dictionaryIds: ['after_dark', 'couples', 'drinks'], priceRub: 349, oldPriceRub: 477, cover: 'drinks' },
+  { id: 'party_pack', name: 'Пак для вечеринки', description: 'Домашняя вечеринка, 18+, Для влюбленных и Пьянка и бар для взрослых компаний.', dictionaryIds: ['party_house', 'after_dark', 'couples', 'drinks'], priceRub: 349, oldPriceRub: 606, cover: 'drinks' },
+  { id: 'fandom_pack', name: 'Фан-пак Шпиона', description: 'Гарри Поттер, Властелин колец, ретро-кино и видеоигры.', dictionaryIds: ['harry_potter', 'lotr', 'retro_movies', 'video_games'], priceRub: 399, oldPriceRub: 576, cover: 'fantasy' },
   { id: 'items_pack', name: 'Предметы Шпиона', description: 'Гаджеты, романтика, 18+ намёки, странные вещи, алкоголь и компьютерные игры.', dictionaryIds: ['items_gadgets', 'items_couples', 'items_after_dark', 'items_weird', 'items_alcohol', 'items_computer_games'], priceRub: 499, oldPriceRub: 914, cover: 'items_computer_games' },
-  { id: 'all_spy', name: 'Архив Шпиона 2026', description: 'Большой набор материалов Шпиона из текущего каталога. Состав указан в карточке и не включает будущие выпуски.', dictionaryIds: [...EXTRA_SPY_DICTIONARIES.map((item) => item.id), 'items_gadgets', 'items_couples', 'items_after_dark', 'items_weird', 'items_alcohol', 'items_computer_games'], priceRub: 1099, oldPriceRub: 2344, cover: 'base' },
+  { id: 'all_spy', name: 'Архив Шпиона 2026', description: 'Большой набор материалов Шпиона из текущего каталога. Состав указан в карточке и не включает будущие выпуски.', dictionaryIds: [...EXTRA_SPY_DICTIONARIES.map((item) => item.id), 'items_gadgets', 'items_couples', 'items_after_dark', 'items_weird', 'items_alcohol', 'items_computer_games'], priceRub: 1099, oldPriceRub: 3029, cover: 'base' },
 ];

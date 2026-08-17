@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { aliasDefinition, normalizeAliasSettings } from './games/alias/index.js';
 import { bunkerDefinition, currentBunkerRevealPlayer, normalizeBunkerSettings, publicBunkerCards } from './games/bunker/index.js';
 import { normalizeSpySettings, spyDefinition } from './games/spy/index.js';
+import { normalizeTruthDareSettings, truthDareDefinition } from './games/truthdare/index.js';
 
 const rooms = new Map();
 const roomCodes = new Map();
@@ -16,15 +17,15 @@ function makeCode() {
 export function createRoom({ hostId, hostName, gameId = 'spy' }) {
   const id = randomUUID();
   const code = makeCode();
-  const safeGameId = ['alias', 'bunker'].includes(gameId) ? gameId : 'spy';
+  const safeGameId = ['alias', 'bunker', 'truthdare'].includes(gameId) ? gameId : 'spy';
   const room = {
     id,
     code,
     hostId,
     gameId: safeGameId,
     state: 'lobby',
-    settings: safeGameId === 'alias' ? { ...aliasDefinition.defaultSettings } : safeGameId === 'bunker' ? { ...bunkerDefinition.defaultSettings } : { ...spyDefinition.defaultSettings },
-    scores: safeGameId === 'alias' ? { team_1: 0, team_2: 0 } : safeGameId === 'bunker' ? { saved: 0, eliminated: 0 } : { civilians: 0, spies: 0 },
+    settings: safeGameId === 'alias' ? { ...aliasDefinition.defaultSettings } : safeGameId === 'bunker' ? { ...bunkerDefinition.defaultSettings } : safeGameId === 'truthdare' ? { ...truthDareDefinition.defaultSettings } : { ...spyDefinition.defaultSettings },
+    scores: safeGameId === 'alias' ? { team_1: 0, team_2: 0 } : safeGameId === 'bunker' ? { saved: 0, eliminated: 0 } : safeGameId === 'truthdare' ? {} : { civilians: 0, spies: 0 },
     aliasTeams: [],
     usedAliasWords: [],
     matchHistory: [],
@@ -58,7 +59,7 @@ export function addPlayer(room, { playerId, name }) {
     return existing;
   }
   if (room.state !== 'lobby') throw new Error('Игра уже началась');
-  const maxPlayers = room.gameId === 'alias' ? aliasDefinition.maxPlayers : room.gameId === 'bunker' ? bunkerDefinition.maxPlayers : spyDefinition.maxPlayers;
+  const maxPlayers = room.gameId === 'alias' ? aliasDefinition.maxPlayers : room.gameId === 'bunker' ? bunkerDefinition.maxPlayers : room.gameId === 'truthdare' ? truthDareDefinition.maxPlayers : spyDefinition.maxPlayers;
   if (room.players.length >= maxPlayers) throw new Error('Комната заполнена');
   const player = { id: playerId, name: uniquePlayerName(room, name, playerId), ready: false, online: true };
   room.players.push(player);
@@ -91,7 +92,9 @@ export function updateRoomSettings(room, settings) {
     ? normalizeAliasSettings({ ...room.settings, ...settings })
     : room.gameId === 'bunker'
       ? normalizeBunkerSettings({ ...room.settings, ...settings })
-      : normalizeSpySettings({ ...room.settings, ...settings });
+      : room.gameId === 'truthdare'
+        ? normalizeTruthDareSettings({ ...room.settings, ...settings })
+        : normalizeSpySettings({ ...room.settings, ...settings });
 }
 
 export function publicRoom(room, playerId, extra = {}) {
@@ -129,6 +132,10 @@ export function publicRoom(room, playerId, extra = {}) {
     currentRevealIndex: room.round.currentRevealIndex || 0,
     currentRevealPlayerId: room.gameId === 'bunker' ? currentBunkerRevealPlayer(room) : null,
     publicCards: room.gameId === 'bunker' ? publicBunkerCards(room) : [],
+    activePlayerId: room.round.activePlayerId,
+    activePlayerName: room.round.activePlayerName,
+    promptType: room.round.promptType,
+    promptText: room.round.promptText,
   } : null;
   return {
     id: room.id,

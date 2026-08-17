@@ -15,9 +15,8 @@ const routes = [
   ['06-bunker', '/games/bunker'],
   ['07-demo', '/demo'],
   ['08-contacts', '/contacts'],
-  ['09-refund', '/refund'],
-  ['10-terms', '/terms'],
-  ['11-privacy', '/privacy'],
+  ['09-terms', '/terms'],
+  ['10-privacy', '/privacy'],
 ];
 
 const badPatterns = [

@@ -10,12 +10,14 @@ const authCodes = new Map();
 
 function attachEmailAccount(playerId, email, name) {
   const existing = allProfiles().find((profile) => profile.email === email);
-  const profile = existing || getOrCreateProfile(playerId || `email-${crypto.randomUUID()}`, name || email.split('@')[0]);
+  const playerProfile = playerId ? allProfiles().find((profile) => profile.id === playerId) : null;
+  const created = !existing && !playerProfile?.email;
+  const profile = existing || playerProfile || getOrCreateProfile(playerId || `email-${crypto.randomUUID()}`, name || email.split('@')[0]);
   profile.email = email;
   profile.accountType = 'email';
   if (name) profile.name = cleanFeedbackText(name, 24) || profile.name;
   profile.updatedAt = Date.now();
-  return profile;
+  return { profile, created };
 }
 
 export const authRouter = Router();
@@ -45,9 +47,9 @@ authRouter.post('/verify-code', (request, response) => {
     const saved = authCodes.get(email);
     if (!saved || saved.expiresAt < Date.now() || saved.code !== code) throw new Error('Код неверный или устарел.');
     authCodes.delete(email);
-    const profile = attachEmailAccount(request.body?.playerId, email, request.body?.name);
+    const { profile, created } = attachEmailAccount(request.body?.playerId, email, request.body?.name);
     persistProfiles();
-    response.json({ ok: true, account: { id: profile.id, email: profile.email, name: profile.name }, profile: publicProfile(profile) });
+    response.json({ ok: true, created, account: { id: profile.id, email: profile.email, name: profile.name }, profile: publicProfile(profile) });
   } catch (error) {
     response.status(error.status || 400).json({ ok: false, error: error.message || 'Auth verify failed' });
   }

@@ -10,6 +10,7 @@ import {
 } from '../profileStore.js';
 import { analyticsSnapshot, track } from '../analyticsStore.js';
 import { listSpyBundles, listSpyDictionaries } from '../games/spy/index.js';
+import { listThemePasses } from '../games/thematicPasses.js';
 import { persistProfiles } from '../lib/persist.js';
 import { roomThemes } from '../lib/roomThemes.js';
 
@@ -76,6 +77,7 @@ function adminProfileSummary(profile) {
     proPlus: Boolean(publicData.proPlus),
     subscription: publicData.subscription || null,
     gamePasses: publicData.gamePasses || [],
+    themePasses: publicData.themePasses || [],
     partyPasses: publicData.partyPasses || [],
     ownedDictionaryIds: publicData.ownedDictionaryIds || ['base'],
     ownedDictionaryCount: publicData.ownedDictionaryIds?.length || 0,
@@ -120,6 +122,7 @@ function adminOverview() {
         { id: 'alias_pass', name: 'Alias Pass на месяц', gameId: 'alias', priceRub: 99 },
         { id: 'bunker_pass', name: 'Bunker Pass на месяц', gameId: 'bunker', priceRub: 99 },
       ],
+      themePasses: listThemePasses(),
       extras: [
         { type: 'custom_dictionary', id: 'custom_dictionary', name: 'Конструктор словарей', priceRub: 199 },
         { type: 'party_pass', id: 'party_pass_24h', name: 'WeekendPass 24 часа', priceRub: 149 },

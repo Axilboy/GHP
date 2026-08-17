@@ -116,6 +116,30 @@ test('three players can complete a classic spy round', { timeout: 15000 }, async
   }
 });
 
+test('free spy room requires paid spy access for multiple spies', { timeout: 15000 }, async () => {
+  const accessPort = 3300 + Math.floor(Math.random() * 2000);
+  const accessUrl = `http://127.0.0.1:${accessPort}`;
+  const server = spawn(process.execPath, ['server/index.js'], {
+    cwd: process.cwd(),
+    env: { ...process.env, PORT: String(accessPort), NODE_ENV: 'production' },
+    stdio: 'ignore',
+  });
+  const socket = io(accessUrl, { transports: ['websocket'] });
+  try {
+    assert.equal((await waitForServer(`${accessUrl}/api/health`)).status, 200);
+    await new Promise((resolve) => socket.once('connect', resolve));
+    socket.emit('identify', { playerId: 'spy-free-host' });
+    const created = await request(socket, 'create_room', { playerId: 'spy-free-host', name: 'Host' });
+    await assert.rejects(
+      request(socket, 'update_settings', { roomId: created.room.id, settings: { spyCount: 2 } }),
+      /Больше одного шпиона доступно в PRO, WeekendPass или Spy Pass/,
+    );
+  } finally {
+    socket.close();
+    server.kill();
+  }
+});
+
 test('host can switch game in lobby', { timeout: 15000 }, async () => {
   const switchPort = 3300 + Math.floor(Math.random() * 2000);
   const switchUrl = `http://127.0.0.1:${switchPort}`;
@@ -151,8 +175,34 @@ test('host can switch game in lobby', { timeout: 15000 }, async () => {
   }
 });
 
+test('truth or dare room requires PRO access', { timeout: 15000 }, async () => {
+  const server = spawn(process.execPath, ['server/index.js'], {
+    cwd: process.cwd(),
+    env: { ...process.env, PORT: String(port), NODE_ENV: 'production' },
+    stdio: 'ignore',
+  });
+  const socket = io(baseUrl, { transports: ['websocket'] });
+  try {
+    assert.equal((await waitForServer(`${baseUrl}/api/health`)).status, 200);
+    await new Promise((resolve) => socket.once('connect', resolve));
+    socket.emit('identify', { playerId: 'truthdare-free-host' });
+
+    await assert.rejects(
+      request(socket, 'create_room', { playerId: 'truthdare-free-host', name: 'Host', gameId: 'truthdare' }),
+      /Правда или действие пока доступна только в PRO/,
+    );
+
+    await request(socket, 'activate_demo_pro');
+    const created = await request(socket, 'create_room', { playerId: 'truthdare-free-host', name: 'Host', gameId: 'truthdare' });
+    assert.equal(created.room.gameId, 'truthdare');
+  } finally {
+    socket.disconnect();
+    server.kill();
+  }
+});
+
 test('spy answer is reviewed by civilian vote', { timeout: 15000 }, async () => {
-  const reviewPort = 3211;
+  const reviewPort = 5300 + Math.floor(Math.random() * 1000);
   const reviewUrl = `http://127.0.0.1:${reviewPort}`;
   const server = spawn(process.execPath, ['server/index.js'], {
     cwd: process.cwd(),
@@ -197,7 +247,7 @@ test('spy answer is reviewed by civilian vote', { timeout: 15000 }, async () => 
 });
 
 test('four players can complete alias turns and finish a match', { timeout: 15000 }, async () => {
-  const aliasPort = 3212;
+  const aliasPort = 6300 + Math.floor(Math.random() * 1000);
   const aliasUrl = `http://127.0.0.1:${aliasPort}`;
   const server = spawn(process.execPath, ['server/index.js'], {
     cwd: process.cwd(),

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 160" role="img" aria-label="GameHubParty">
+  <g transform="translate(18 24) scale(.22)">
+    <rect width="512" height="512" rx="112" fill="#1769f6"/>
+    <path fill="#fbfaf7" d="M154 130h204c39 0 70 31 70 70v86c0 39-31 70-70 70h-74l-63 54c-13 11-33 2-33-15v-39h-34c-39 0-70-31-70-70v-86c0-39 31-70 70-70Z"/>
+    <path fill="#101a36" fill-opacity=".12" d="M188 356h34v33l50-43h86c34 0 62-28 62-62v-28c-12 47-48 74-97 74H171c-35 0-64-16-81-42 2 38 33 68 72 68h26Z"/>
+    <circle cx="196" cy="244" r="22" fill="#1769f6"/>
+    <circle cx="256" cy="244" r="22" fill="#ff665c"/>
+    <circle cx="316" cy="244" r="22" fill="#0aa876"/>
+  </g>
+  <text x="154" y="98" fill="#101a36" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="56" font-weight="800" letter-spacing="0">GameHub</text>
+  <text x="410" y="98" fill="#ff665c" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="56" font-weight="800" letter-spacing="0">Party</text>
+</svg>

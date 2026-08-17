@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { APP_VERSION } from '../version';
+import { APP_DISPLAY_VERSION } from '../version';
 import { vkSummary } from '../vk';
 import { formatTime } from './helpers';
 
@@ -46,9 +46,18 @@ export function CarouselFrame({ target, children }) {
 export function Setting({ label, children }) { return <div className="setting"><span>{label}</span>{children}</div>; }
 export function Counter({ value, min, max, change }) { return <div className="counter"><button onClick={() => change(Math.max(min, value - 1))}>−</button><b>{value}</b><button onClick={() => change(Math.min(max, value + 1))}>+</button></div>; }
 export function ErrorText({ text }) { return <p className="error-text">{text}</p>; }
+// Тот же визуальный язык, что и у стартового сплэша в index.html — загрузка ощущается единой.
+export function LoadingScreen({ label = 'Загружаем' }) {
+  return <div className="app-loading" role="status" aria-live="polite">
+    <div className="app-loading-brand">GameHub<span>·</span>Party</div>
+    <div className="app-loading-bar"><i /></div>
+    <b>{label}</b>
+    <small>Первая загрузка — дальше открывается мгновенно</small>
+  </div>;
+}
 
-export function GameSwitcher({ gameId, changeGame }) {
-  return <Setting label="Игра"><select value={gameId} onChange={(event) => changeGame(event.target.value)}><option value="spy">Шпион</option><option value="alias">Alias</option><option value="bunker">Бункер</option></select></Setting>;
+export function GameSwitcher({ gameId, changeGame, truthDareLocked = false }) {
+  return <Setting label="Игра"><select value={gameId} onChange={(event) => changeGame(event.target.value)}><option value="spy">Шпион</option><option value="alias">Alias</option><option value="bunker">Бункер</option><option value="truthdare" disabled={truthDareLocked}>Правда или действие · PRO</option></select></Setting>;
 }
 
 export function VoteResults({ counts, players }) {
@@ -103,7 +112,7 @@ export function NameModal({ value, setValue, close, save }) {
 }
 
 export function SeoLinks() {
-  return <footer className="seo-links wrap"><b>Игры для компании</b><nav><a href="/games/spy">Шпион онлайн</a><a href="/games/alias">Alias онлайн</a><a href="/">Все игры</a><a href="/store">Магазин</a><a href="/demo">Статус</a><a href="/vk">VK Mini Apps</a><a href="/contacts">Контакты</a><a href="/refund">Возвраты</a><a href="/privacy">Политика</a><a href="/terms">Оферта</a></nav><span className="site-version">GameHubParty v{APP_VERSION}</span></footer>;
+  return <footer className="seo-links wrap"><b>Игры для компании</b><nav><a href="/">Все игры</a><a href="/games/spy">Шпион онлайн</a><a href="/games/alias">Alias онлайн</a><a href="/games/bunker">Бункер онлайн</a><a href="/games/truth-or-dare">Правда или действие</a><a href="/store">Магазин</a><a href="/contacts">Контакты</a><a href="/privacy">Политика</a><a href="/terms">Оферта</a></nav><span className="site-version">GameHubParty v{APP_DISPLAY_VERSION}</span></footer>;
 }
 
 export function SessionReturnBanner({ session, now, returnToSession, closeSavedSession }) {
@@ -143,7 +152,8 @@ export function LobbyPlayerAdBanner({ adPolicy, navigate }) {
   }
   if (!adPolicy?.enabled) return null;
   return <section className="lobby-ad-banner" data-ad-slot="lobby_player_banner">
-    <AdsterraBanner unit="mobile320x50" slot="lobby_player_banner" />
+    {ADSTERRA_ENABLED && <AdsterraSocialBar />}
+    {ADSTERRA_ENABLED && <AdsterraBanner unit="mobile320x50" slot="lobby_player_banner" />}
     <div className="lobby-ad-upsell">
       <p><b>Free-комната.</b> Короткая пауза перед раундом. WeekendPass, Game Pass или PRO убирает её для всей комнаты.</p>
       <button className="button small secondary" onClick={() => navigate('store')}>Убрать рекламу</button>
@@ -162,7 +172,25 @@ export function AdBreakModal({ placement, slot = 'internal_ad_slot', seconds = 5
     await onContinue?.();
     close();
   };
-  return <div className="backdrop ad-break-backdrop" onMouseDown={close}><section className="modal ad-break-modal" onMouseDown={(event) => event.stopPropagation()}><span className="eyebrow">Рекламная пауза</span><h2>{title}</h2><AdsterraBanner unit="rectangle300x250" slot={slot} /><p>В активной игре рекламы нет. WeekendPass, Game Pass или PRO отключит такие паузы для всей комнаты.</p><button className="button primary full" disabled={secondsLeft > 0} onClick={continueGame}>{secondsLeft > 0 ? `Начнём через ${secondsLeft}` : continueLabel}</button><button className="button secondary full" onClick={close}>Вернуться без старта</button></section></div>;
+  return <div className="backdrop ad-break-backdrop" onMouseDown={close}><section className="modal ad-break-modal" onMouseDown={(event) => event.stopPropagation()}><span className="eyebrow">Короткая пауза</span><h2>{title}</h2>{ADSTERRA_ENABLED && <AdsterraBanner unit="rectangle300x250" slot={slot} />}<p>В активной игре пауз нет. WeekendPass, Game Pass или PRO отключит ожидание для всей комнаты.</p><button className="button primary full" disabled={secondsLeft > 0} onClick={continueGame}>{secondsLeft > 0 ? `Начнём через ${secondsLeft}` : continueLabel}</button><button className="button secondary full" onClick={close}>Вернуться без старта</button></section></div>;
+}
+
+const ADSTERRA_ENABLED = import.meta.env.VITE_ADSTERRA_ENABLED === 'true';
+const ADSTERRA_SOCIAL_BAR_SRC = 'https://consistinvention.com/d7/4f/d9/d74fd9fb9702fbaff65376cfa4eea0bd.js';
+
+function AdsterraSocialBar() {
+  useEffect(() => {
+    const scriptId = 'ghp-adsterra-social-bar';
+    if (document.getElementById(scriptId)) return undefined;
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = ADSTERRA_SOCIAL_BAR_SRC;
+    script.async = true;
+    script.dataset.adSlot = 'free_room_social_bar';
+    document.body.append(script);
+    return () => script.remove();
+  }, []);
+  return null;
 }
 
 const adsterraUnits = {
@@ -170,20 +198,26 @@ const adsterraUnits = {
     key: 'd5c1fe703354df9437609dcf4bea1ac7',
     width: 320,
     height: 50,
-    src: 'https://www.highperformanceformat.com/d5c1fe703354df9437609dcf4bea1ac7/invoke.js',
+    src: 'https://consistinvention.com/d5c1fe703354df9437609dcf4bea1ac7/invoke.js',
   },
   rectangle300x250: {
     key: '464f545a84d6f512006bbbae88f7450a',
     width: 300,
     height: 250,
-    src: 'https://www.highperformanceformat.com/464f545a84d6f512006bbbae88f7450a/invoke.js',
+    src: 'https://consistinvention.com/464f545a84d6f512006bbbae88f7450a/invoke.js',
   },
 };
 
 export function AdsterraBanner({ unit, slot }) {
   const [status, setStatus] = useState('loading');
+  const [attempt, setAttempt] = useState(0);
   const containerRef = useRef(null);
   const config = adsterraUnits[unit] || adsterraUnits.mobile320x50;
+  useEffect(() => {
+    const retry = () => setAttempt((current) => current + 1);
+    window.addEventListener('ghp:retry-ads', retry);
+    return () => window.removeEventListener('ghp:retry-ads', retry);
+  }, []);
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return undefined;
@@ -208,8 +242,15 @@ export function AdsterraBanner({ unit, slot }) {
       height: config.height,
       width: config.width,
       params: {},
-    })};</script><script type="text/javascript" src="${config.src}"></script></body></html>`);
+    })};</script></body></html>`);
     doc.close();
+    const providerScript = doc.createElement('script');
+    providerScript.type = 'text/javascript';
+    providerScript.src = config.src;
+    providerScript.onerror = () => {
+      setStatus('failed');
+    };
+    doc.body.append(providerScript);
     const hasCreative = () => {
       const body = frame.contentWindow?.document?.body;
       if (!body) return false;
@@ -222,7 +263,12 @@ export function AdsterraBanner({ unit, slot }) {
       }
     }, 500);
     const timeout = window.setTimeout(() => {
-      setStatus((current) => (current === 'loading' && !hasCreative() ? 'failed' : current));
+      setStatus((current) => {
+        // Успешно загруженный скрипт без креатива означает отсутствие подходящего
+        // показа у сети, а не AdBlock. Слот скрываем, но сайт не блокируем.
+        if (current === 'loading' && !hasCreative()) return 'failed';
+        return current;
+      });
       window.clearInterval(interval);
     }, 10000);
     return () => {
@@ -230,9 +276,9 @@ export function AdsterraBanner({ unit, slot }) {
       window.clearInterval(interval);
       container.innerHTML = '';
     };
-  }, [config.height, config.key, config.src, config.width, slot]);
+  }, [attempt, config.height, config.key, config.src, config.width, slot]);
   return <div className={`adsterra-ad adsterra-${unit} ${status === 'loaded' ? 'adsterra-loaded' : ''} ${status === 'failed' ? 'adsterra-failed' : ''}`} style={{ '--ad-width': `${config.width}px`, '--ad-height': `${config.height}px` }} data-ad-slot={slot}>
     <div ref={containerRef} className="adsterra-script-slot" aria-label={`Adsterra ${slot}`} />
-    {status === 'failed' && <span className="adsterra-fallback">Реклама не загрузилась</span>}
+    {status === 'failed' && <span className="adsterra-fallback">Реклама временно недоступна</span>}
   </div>;
 }

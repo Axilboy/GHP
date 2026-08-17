@@ -11,15 +11,21 @@ test('alias catalog includes free and paid expansion dictionaries', () => {
   assert.ok(paidIds.includes('memes'));
   assert.ok(paidIds.includes('after_dark'));
   assert.ok(paidIds.includes('family'));
+  assert.ok(paidIds.includes('harry_potter'));
+  assert.ok(paidIds.includes('lotr'));
+  assert.ok(paidIds.includes('retro_movies'));
+  assert.ok(paidIds.includes('video_games'));
 });
 
 test('alias paid dictionaries add words to the pool', () => {
   const basePool = aliasWordPool(['everyday']);
-  const expandedPool = aliasWordPool(['everyday', 'movies', 'memes', 'after_dark', 'family']);
+  const expandedPool = aliasWordPool(['everyday', 'movies', 'memes', 'after_dark', 'family', 'harry_potter', 'video_games']);
 
   assert.ok(expandedPool.length > basePool.length);
   assert.ok(expandedPool.includes('режиссёр'));
   assert.ok(expandedPool.includes('мем'));
+  assert.ok(expandedPool.includes('Хогвартс'));
+  assert.ok(expandedPool.includes('финальный босс'));
 });
 
 test('alias settings reject unknown dictionaries', () => {

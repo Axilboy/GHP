@@ -29,12 +29,35 @@ if (-not $KeyPath) {
   }
 }
 Write-Host "Using SSH key: $KeyPath"
+$TempKeyPath = ""
+if (Test-ReadablePath $KeyPath) {
+  try {
+    $TempKeyPath = Join-Path $env:TEMP "gamehubparty_deploy_$PID"
+    Copy-Item -LiteralPath $KeyPath -Destination $TempKeyPath -Force
+    & icacls $TempKeyPath /inheritance:r *> $null
+    if ($LASTEXITCODE -ne 0) { throw "Could not disable inherited permissions on the temporary SSH key." }
+    & icacls $TempKeyPath /grant:r "${env:USERNAME}:F" *> $null
+    if ($LASTEXITCODE -ne 0) { throw "Could not restrict permissions on the temporary SSH key." }
+    $KeyPath = $TempKeyPath
+  } catch {
+    if ($TempKeyPath -and (Test-Path -LiteralPath $TempKeyPath)) {
+      Remove-Item -LiteralPath $TempKeyPath -Force
+    }
+    $TempKeyPath = ""
+    throw
+  }
+}
 $KeyAuthOk = $false
+$SshOptions = @(
+  "-o", "ServerAliveInterval=15",
+  "-o", "ServerAliveCountMax=20",
+  "-o", "ConnectTimeout=30"
+)
 if (Test-ReadablePath $KeyPath) {
   try {
     $oldErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
-    & ssh -i $KeyPath -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=8 "${User}@${Server}" "echo KEY_OK" *> $null
+    & ssh @SshOptions -i $KeyPath -o BatchMode=yes -o IdentitiesOnly=yes "${User}@${Server}" "echo KEY_OK" *> $null
     $KeyAuthOk = ($LASTEXITCODE -eq 0)
   } catch {
     $KeyAuthOk = $false
@@ -64,15 +87,16 @@ try {
   if ($LASTEXITCODE -ne 0) { throw "Could not create deployment archive." }
 
   if ($KeyAuthOk) {
-    & scp -i $KeyPath -o BatchMode=yes -o IdentitiesOnly=yes $ArchivePath "${User}@${Server}:$RemoteArchive"
+    & scp @SshOptions -i $KeyPath -o BatchMode=yes -o IdentitiesOnly=yes $ArchivePath "${User}@${Server}:$RemoteArchive"
   } else {
-    & scp $ArchivePath "${User}@${Server}:$RemoteArchive"
+    & scp @SshOptions $ArchivePath "${User}@${Server}:$RemoteArchive"
   }
   if ($LASTEXITCODE -ne 0) { throw "Could not upload deployment archive." }
 
   $remoteCommand = @"
 set -eu
 release='$RemoteRoot/releases/$Release'
+previous="`$(readlink -f '$RemoteRoot/current' 2>/dev/null || true)"
 mkdir -p "`$release"
 tar -xzf '$RemoteArchive' -C "`$release"
 mkdir -p '$RemoteRoot/shared'
@@ -83,22 +107,36 @@ elif [ -f '$RemoteRoot/shared/.env' ]; then
 elif [ -f '$RemoteRoot/current/.env' ]; then
   cp '$RemoteRoot/current/.env' "`$release/.env"
 fi
+cd "`$release"
+docker compose -p gamehubparty build gamehubparty
+docker compose -p gamehubparty pull redis
 ln -sfn "`$release" '$RemoteRoot/current.next'
 mv -Tf '$RemoteRoot/current.next' '$RemoteRoot/current'
-rm -f '$RemoteArchive'
 cd '$RemoteRoot/current'
-docker compose -p gamehubparty up -d --build
+if ! docker compose -p gamehubparty up -d --no-build; then
+  if [ -n "`$previous" ] && [ -d "`$previous" ]; then
+    ln -sfn "`$previous" '$RemoteRoot/current.next'
+    mv -Tf '$RemoteRoot/current.next' '$RemoteRoot/current'
+    cd '$RemoteRoot/current'
+    docker compose -p gamehubparty up -d --no-build || true
+  fi
+  exit 1
+fi
+rm -f '$RemoteArchive'
 find '$RemoteRoot/releases' -mindepth 1 -maxdepth 1 -type d | sort -r | tail -n +6 | xargs -r rm -rf
 printf 'DEPLOY_OK %s\n' "`$release"
 "@
   if ($KeyAuthOk) {
-    & ssh -i $KeyPath -o BatchMode=yes -o IdentitiesOnly=yes "${User}@${Server}" $remoteCommand
+    & ssh @SshOptions -i $KeyPath -o BatchMode=yes -o IdentitiesOnly=yes "${User}@${Server}" $remoteCommand
   } else {
-    & ssh "${User}@${Server}" $remoteCommand
+    & ssh @SshOptions "${User}@${Server}" $remoteCommand
   }
   if ($LASTEXITCODE -ne 0) { throw "Remote deployment failed." }
 }
 finally {
   Pop-Location
   if (Test-Path $ArchivePath) { Remove-Item -LiteralPath $ArchivePath -Force }
+  if ($TempKeyPath -and (Test-Path -LiteralPath $TempKeyPath)) {
+    Remove-Item -LiteralPath $TempKeyPath -Force
+  }
 }
