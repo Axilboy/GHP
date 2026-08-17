@@ -69,7 +69,7 @@ import {
   updateProfileName,
 } from './profileStore.js';
 import { connectProfilePersistence, loadProfileSnapshot, scheduleProfileSnapshot } from './profilePersistence.js';
-import { analyticsSnapshot, connectAnalyticsPersistence, restoreAnalyticsSnapshot, track } from './analyticsStore.js';
+import { connectAnalyticsPersistence, restoreAnalyticsSnapshot, track } from './analyticsStore.js';
 import { aliasDefinition, aliasDictionaryPreview, createAliasRound, createAliasTeams, nextAliasWord } from './games/alias/index.js';
 import {
   bunkerActiveContestants,
@@ -101,7 +101,10 @@ app.use((request, response, next) => {
 app.use(express.json({ limit: '64kb' }));
 
 app.get('/api/health', (_request, response) => response.json({ ok: true }));
-app.get('/api/status', (_request, response) => response.json({ ok: true, games: ['spy', 'alias', 'bunker', 'truthdare'], activeRooms: allRooms().length, analytics: analyticsSnapshot() }));
+// Публичный статус — только здоровье сервиса. Аналитика содержит id игроков,
+// user-agent'ы и рекламные кампании, поэтому живёт только в /api/admin/overview
+// под ADMIN_PIN.
+app.get('/api/status', (_request, response) => response.json({ ok: true, games: ['spy', 'alias', 'bunker', 'truthdare'], activeRooms: allRooms().length }));
 app.get('/api/games', (_request, response) => response.json({ games: [spyDefinition, aliasDefinition, bunkerDefinition, truthDareDefinition] }));
 app.use('/api', feedbackRouter);
 app.post('/api/vk/launch', (request, response) => {

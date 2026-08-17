@@ -60,6 +60,14 @@ test('admin overview shows rooms and can confirm demo orders', { timeout: 15000 
     const denied = await fetch(`${baseUrl}/api/admin/overview`);
     assert.equal(denied.status, 403);
 
+    // Публичный статус не должен раздавать аналитику: там id игроков,
+    // user-agent'ы, реферреры и рекламные кампании.
+    const status = await (await fetch(`${baseUrl}/api/status`)).json();
+    assert.equal(status.ok, true);
+    assert.equal(status.analytics, undefined);
+    const statusKeys = Object.keys(status).sort();
+    assert.deepEqual(statusKeys, ['activeRooms', 'games', 'ok']);
+
     await new Promise((resolve) => socket.once('connect', resolve));
     socket.emit('identify', { playerId: 'admin-guest' });
     await request(socket, 'get_profile');

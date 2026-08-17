@@ -103,11 +103,19 @@ function summarizeWindow(window, now) {
   };
 }
 
+// Шаги воронки считаем по уникальным комнатам, а не по событиям: старт раунда
+// шлётся раз на комнату, а завершение — на каждый раунд или ход (Alias, ПоД),
+// из-за чего сырые счётчики давали конверсию в тысячи процентов.
+// События без roomId (просмотры страниц, магазин) считаются поштучно как раньше.
 function buildFunnel(windowEvents, steps) {
-  const counters = countBy(windowEvents.flatMap((event) => eventKeys(event)));
+  const buckets = {};
+  windowEvents.forEach((event, index) => {
+    const bucketId = event.details?.roomId || `event-${index}`;
+    for (const key of eventKeys(event)) (buckets[key] ??= new Set()).add(bucketId);
+  });
   let previous = null;
   return steps.map((step) => {
-    const count = counters[step.key] || 0;
+    const count = buckets[step.key]?.size || 0;
     const conversion = previous === null ? 100 : previous > 0 ? Math.round((count / previous) * 100) : 0;
     previous = count;
     return { ...step, count, conversion };

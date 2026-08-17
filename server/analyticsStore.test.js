@@ -24,3 +24,16 @@ test('analytics snapshot builds game and store funnels', () => {
   assert.equal(today.storeFunnel.find((step) => step.key === 'start_checkout').count >= 1, true);
   assert.equal(today.storeFunnel.find((step) => step.key === 'payment_success').count >= 1, true);
 });
+
+test('a room with many rounds counts once per funnel step', () => {
+  const stepCount = (key) => analyticsSnapshot().byWindow.today.gameFunnel.find((step) => step.key === key).count;
+  const before = { started: stepCount('start_round'), finished: stepCount('finish_round') };
+
+  // Один матч «Правды или действия»: старт раз, а завершений — на каждый ход.
+  const roomId = `room-${Math.random().toString(36).slice(2)}`;
+  track('round_started', { gameId: 'truthdare', roomId });
+  for (let turn = 0; turn < 40; turn += 1) track('round_finished', { gameId: 'truthdare', reason: 'accepted', roomId });
+
+  assert.equal(stepCount('start_round') - before.started, 1);
+  assert.equal(stepCount('finish_round') - before.finished, 1, '40 ходов одной комнаты должны дать одно завершение');
+});
