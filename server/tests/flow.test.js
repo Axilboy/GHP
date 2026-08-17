@@ -247,7 +247,7 @@ test('spy answer is reviewed by civilian vote', { timeout: 15000 }, async () => 
 });
 
 test('players can call a vote during discussion by majority', { timeout: 15000 }, async () => {
-  const callPort = 5300 + Math.floor(Math.random() * 1000);
+  const callPort = 6400 + Math.floor(Math.random() * 500);
   const callUrl = `http://127.0.0.1:${callPort}`;
   const server = spawn(process.execPath, ['server/index.js'], {
     cwd: process.cwd(),
