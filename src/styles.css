@@ -4529,3 +4529,200 @@ html[data-adblock-blocked] body {
 .addon-foot { display: flex; justify-content: space-between; align-items: center; padding: 0 12px 12px; }
 .addon-foot strong { color: var(--accent); font-size: 15px; }
 .addon-foot em { color: var(--mint); font-weight: 800; font-style: normal; font-size: 12px; }
+
+/* Переписка с поддержкой: список обращений и лента сообщений. */
+.support-modal {
+  display: grid;
+  gap: 12px;
+}
+
+.support-back {
+  justify-self: start;
+  padding: 0;
+  font-size: 13px;
+}
+
+.support-threads {
+  display: grid;
+  gap: 8px;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+
+.support-thread-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.support-thread-row b,
+.support-thread-row small {
+  display: block;
+}
+
+.support-thread-row small {
+  color: var(--soft);
+  font-size: 12px;
+}
+
+.support-status {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.support-status-accepted {
+  background: var(--g-accent-soft);
+  color: var(--g-accent-ink);
+}
+
+.support-status-rejected {
+  color: var(--danger);
+}
+
+.support-messages {
+  display: grid;
+  gap: 8px;
+  max-height: 42vh;
+  padding: 4px;
+  overflow-y: auto;
+}
+
+.support-message {
+  max-width: 86%;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.support-message span {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  opacity: .6;
+}
+
+.support-message p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.support-player {
+  justify-self: end;
+  background: var(--g-accent-soft);
+  color: var(--g-accent-ink);
+}
+
+.support-system {
+  justify-self: stretch;
+  max-width: 100%;
+  border: 1px dashed var(--line);
+  background: #fff;
+  text-align: center;
+}
+
+.support-rewards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--g-accent-soft);
+  color: var(--g-accent-ink);
+  font-size: 12px;
+}
+
+.support-rewards b {
+  width: 100%;
+  font-size: 12px;
+}
+
+.support-rewards span {
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #fff;
+  font-weight: 800;
+}
+
+.support-composer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.support-composer textarea {
+  resize: none;
+}
+
+/* Админские диалоги. */
+.admin-thread-open {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-thread-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-thread-head small {
+  display: block;
+  color: var(--soft);
+  font-size: 12px;
+}
+
+.admin-reward-picker {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.admin-reward-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-reward-list button {
+  padding: 7px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-reward-list button.selected {
+  border-color: var(--g-accent);
+  background: var(--g-accent-soft);
+  color: var(--g-accent-ink);
+}
+
+.admin-thread-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}

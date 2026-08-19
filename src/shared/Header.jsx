@@ -5,19 +5,53 @@ import { getSubscriptionStatus } from '../profileStatus';
 import { APP_DISPLAY_VERSION } from '../version';
 import { currentPath, trackClientEvent } from './helpers';
 
+const supportTopics = [
+  { id: 'idea', label: 'Предложение' },
+  { id: 'bug', label: 'Баг' },
+  { id: 'content', label: 'Свой набор карточек' },
+  { id: 'payment', label: 'Оплата' },
+  { id: 'other', label: 'Другое' },
+];
+const supportTopicNames = Object.fromEntries(supportTopics.map((item) => [item.id, item.label]));
+const supportStatusNames = { open: 'В работе', accepted: 'Принято', rejected: 'Отклонено', closed: 'Закрыто' };
+
+// Обратная связь — это переписка с админом, а не письмо в один конец. Пока окно
+// открыто, ответы подтягиваются опросом: для поддержки этого хватает, отдельный
+// сокет-канал ради чата заводить не нужно.
 export function FeedbackModal({ close }) {
+  const [threads, setThreads] = useState(null);
+  const [openId, setOpenId] = useState(null);
+  const [composing, setComposing] = useState(false);
   const [topic, setTopic] = useState('idea');
   const [message, setMessage] = useState('');
   const [contactEmail, setContactEmail] = useState('');
+  const [reply, setReply] = useState('');
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState('');
-  const topics = [
-    { id: 'idea', label: 'Предложение' },
-    { id: 'bug', label: 'Баг' },
-    { id: 'payment', label: 'Оплата' },
-    { id: 'other', label: 'Другое' },
-  ];
-  const submit = async (event) => {
+  const playerId = getPlayerId();
+
+  const loadThreads = () => fetch('/api/threads?playerId=' + encodeURIComponent(playerId))
+    .then((response) => response.json())
+    .then((data) => { if (data.ok) setThreads(data.threads); })
+    .catch(() => {});
+
+  useEffect(() => {
+    loadThreads();
+    const timer = setInterval(loadThreads, 10000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const openThread = threads?.find((thread) => thread.id === openId) || null;
+  useEffect(() => {
+    if (!openThread?.unread) return;
+    fetch('/api/threads/' + openThread.id + '/read', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ playerId }),
+    }).then(loadThreads).catch(() => {});
+  }, [openThread?.id, openThread?.unread]);
+
+  const submitNew = async (event) => {
     event.preventDefault();
     setError('');
     if (message.trim().length < 8) {
@@ -29,40 +63,78 @@ export function FeedbackModal({ close }) {
       const response = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          topic,
-          message,
-          contactEmail,
-          playerId: getPlayerId(),
-          playerName: getOrCreateDisplayName(),
-          page: location.href,
-        }),
+        body: JSON.stringify({ topic, message, contactEmail, playerId, playerName: getOrCreateDisplayName(), page: location.href }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.ok) throw new Error(data.error || 'Не получилось отправить обращение');
-      setStatus('sent');
+      setMessage('');
+      setComposing(false);
+      setOpenId(data.threadId);
+      await loadThreads();
     } catch (sendError) {
-      setStatus('idle');
       setError(sendError.message || 'Не получилось отправить обращение');
+    } finally {
+      setStatus('idle');
     }
   };
+
+  const sendReply = async (event) => {
+    event.preventDefault();
+    if (!reply.trim()) return;
+    setStatus('sending');
+    setError('');
+    try {
+      const response = await fetch('/api/threads/' + openThread.id + '/messages', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ playerId, text: reply }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok) throw new Error(data.error || 'Сообщение не отправилось');
+      setReply('');
+      await loadThreads();
+    } catch (sendError) {
+      setError(sendError.message || 'Сообщение не отправилось');
+    } finally {
+      setStatus('idle');
+    }
+  };
+
+  const showForm = composing || (threads !== null && threads.length === 0);
   return <div className="backdrop feedback-backdrop" onMouseDown={close}>
-    <section className="modal feedback-modal" onMouseDown={(event) => event.stopPropagation()}>
+    <section className="modal feedback-modal support-modal" onMouseDown={(event) => event.stopPropagation()}>
       <button className="modal-close" type="button" aria-label="Закрыть обратную связь" onClick={close}>×</button>
-      {status === 'sent' ? <>
-        <div className="feedback-orb">✓</div>
-        <span className="eyebrow">Обратная связь</span>
-        <h2>Спасибо, сообщение ушло в поддержку</h2>
-        <p>Если оставили почту, мы сможем ответить. Если нет — все равно разберем обращение и поправим продукт.</p>
-        <button className="button primary full" type="button" onClick={close}>Готово</button>
-      </> : <form onSubmit={submit}>
+
+      {openThread ? <>
+        <button className="link support-back" type="button" onClick={() => setOpenId(null)}>← Все обращения</button>
+        <span className="eyebrow">{supportTopicNames[openThread.topic] || 'Обращение'}</span>
+        <h2>Переписка с поддержкой</h2>
+        <div className="support-messages">
+          {openThread.messages.map((item) => <article key={item.id} className={'support-message support-' + item.from}>
+            <span>{item.from === 'player' ? 'Вы' : item.from === 'admin' ? 'Поддержка' : 'Система'}</span>
+            <p>{item.text}</p>
+          </article>)}
+        </div>
+        {openThread.rewards?.length > 0 && <div className="support-rewards">
+          <b>Начислено за помощь</b>
+          {openThread.rewards.map((item, index) => <span key={item.productId + index}>{item.title || item.productId}</span>)}
+        </div>}
+        {error && <p className="form-error">{error}</p>}
+        {openThread.status === 'closed'
+          ? <p className="feedback-note">Обращение закрыто. Если тема снова актуальна, создайте новое.</p>
+          : <form className="support-composer" onSubmit={sendReply}>
+            <textarea value={reply} onChange={(event) => setReply(event.target.value)} rows={2} maxLength={2000} placeholder="Ответить..." />
+            <button className="button primary" type="submit" disabled={status === 'sending' || !reply.trim()}>Отправить</button>
+          </form>}
+      </> : showForm ? <form onSubmit={submitNew}>
+        {threads?.length > 0 && <button className="link support-back" type="button" onClick={() => setComposing(false)}>← Все обращения</button>}
         <span className="eyebrow">Обратная связь</span>
         <h2>Что случилось?</h2>
-        <p>Можно написать идею, баг, вопрос по оплате или просто что мешает нормально играть.</p>
+        <p>Напишите идею, баг или свой набор карточек. Отвечаем в этом же окне, а за полезные находки начисляем доступ.</p>
         <label className="field">
           <span>Тип обращения</span>
           <select value={topic} onChange={(event) => setTopic(event.target.value)}>
-            {topics.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+            {supportTopics.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
           </select>
         </label>
         <label className="field">
@@ -75,10 +147,20 @@ export function FeedbackModal({ close }) {
         </label>
         {error && <p className="form-error">{error}</p>}
         <div className="feedback-submit-bar">
-          <button className="button primary full" type="submit" disabled={status === 'sending'}>{status === 'sending' ? 'Отправляем...' : 'Отправить в поддержку'}</button>
+          <button className="button primary full" type="submit" disabled={status === 'sending'}>{status === 'sending' ? 'Отправляем...' : 'Отправить'}</button>
           <small className="feedback-note">Адрес поддержки: support@gamehubparty.ru</small>
         </div>
-      </form>}
+      </form> : <>
+        <span className="eyebrow">Обратная связь</span>
+        <h2>Ваши обращения</h2>
+        <div className="support-threads">
+          {threads === null ? <p className="feedback-note">Загружаем...</p> : threads.map((thread) => <button key={thread.id} className="support-thread-row" type="button" onClick={() => setOpenId(thread.id)}>
+            <span><b>{supportTopicNames[thread.topic] || 'Обращение'}</b><small>{thread.messages.at(-1)?.text.slice(0, 60)}</small></span>
+            <strong className={'support-status support-status-' + thread.status}>{supportStatusNames[thread.status] || thread.status}{thread.unread > 0 ? ' · ' + thread.unread : ''}</strong>
+          </button>)}
+        </div>
+        <button className="button primary full" type="button" onClick={() => setComposing(true)}>Новое обращение</button>
+      </>}
     </section>
   </div>;
 }

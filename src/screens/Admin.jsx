@@ -156,6 +156,7 @@ export function AdminPage({ navigate }) {
       </div>
     </section>
     <AdminOpsPanel data={adminData} loading={adminLoading} error={adminError} message={adminMessage} reload={loadAdminData} confirmOrder={confirmAdminOrder} manageAccess={manageAdminAccess} removePurchase={removeAdminPurchase} />
+    <AdminThreads readPin={readAdminPin} products={adminData?.products} />
     <section className="section wrap">
       <div className="section-title"><h2>Папки скриншотов</h2><span>{screenshotFolders.length}</span></div>
       <div className="screenshot-folders">{screenshotFolders.map((folder) => <article className="screenshot-folder-card" key={folder.title}>
@@ -328,4 +329,107 @@ function adminRoomState(room) {
 function formatAdminDate(value) {
   if (!value) return 'нет даты';
   return new Date(value).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+const threadTopicNames = { idea: 'Предложение', bug: 'Баг', content: 'Набор карточек', payment: 'Оплата', task: 'Задание', other: 'Другое' };
+const rewardPresets = [
+  { label: 'WeekendPass 24ч', type: 'party_pass', productId: 'party_pass_24h' },
+  { label: 'PRO на месяц', type: 'subscription', productId: 'pro', months: 1 },
+  { label: 'PRO на 3 месяца', type: 'subscription', productId: 'pro', months: 3 },
+  { label: 'Spy Pass', type: 'game_pass', productId: 'spy_pass', months: 1 },
+  { label: 'Alias Pass', type: 'game_pass', productId: 'alias_pass', months: 1 },
+  { label: 'Bunker Pass', type: 'game_pass', productId: 'bunker_pass', months: 1 },
+];
+
+// Диалоги с игроками: ответ, приём заявки с любым набором наград и отказ.
+function AdminThreads({ readPin }) {
+  const [threads, setThreads] = useState([]);
+  const [openId, setOpenId] = useState(null);
+  const [reply, setReply] = useState('');
+  const [picked, setPicked] = useState([]);
+  const [note, setNote] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const call = async (url, options = {}) => {
+    const response = await fetch(url, {
+      ...options,
+      headers: { 'content-type': 'application/json', 'x-admin-pin': readPin(), ...(options.headers || {}) },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.ok) throw new Error(data.error || 'Действие не выполнено');
+    return data;
+  };
+  const load = () => call('/api/admin/threads').then((data) => setThreads(data.threads)).catch((loadError) => setError(loadError.message));
+  useEffect(() => {
+    load();
+    const timer = setInterval(load, 15000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const open = threads.find((thread) => thread.id === openId) || null;
+  const act = async (fn) => {
+    setBusy(true);
+    setError('');
+    try { await fn(); await load(); } catch (actError) { setError(actError.message); } finally { setBusy(false); }
+  };
+  const send = () => act(async () => {
+    if (!reply.trim()) throw new Error('Пустой ответ');
+    await call('/api/admin/threads/' + open.id + '/messages', { method: 'POST', body: JSON.stringify({ text: reply }) });
+    setReply('');
+  });
+  const accept = () => act(async () => {
+    if (!picked.length) throw new Error('Выберите награду');
+    await call('/api/admin/threads/' + open.id + '/accept', { method: 'POST', body: JSON.stringify({ rewards: picked, note }) });
+    setPicked([]);
+    setNote('');
+  });
+  const reject = () => act(async () => {
+    await call('/api/admin/threads/' + open.id + '/reject', { method: 'POST', body: JSON.stringify({ reason: note }) });
+    setNote('');
+  });
+  const togglePreset = (preset) => setPicked((current) => current.some((item) => item.productId === preset.productId && item.type === preset.type && item.months === preset.months)
+    ? current.filter((item) => !(item.productId === preset.productId && item.type === preset.type && item.months === preset.months))
+    : [...current, { type: preset.type, productId: preset.productId, months: preset.months }]);
+
+  const waiting = threads.filter((thread) => thread.unread > 0).length;
+  return <section className="section wrap admin-threads">
+    <div className="section-title"><h2>Диалоги</h2><span>{threads.length}{waiting > 0 ? ' · ' + waiting + ' новых' : ''}</span></div>
+    {error && <ErrorText text={error} />}
+    {open ? <div className="admin-thread-open">
+      <button className="link" type="button" onClick={() => setOpenId(null)}>← Все диалоги</button>
+      <div className="admin-thread-head">
+        <div><b>{open.playerName}</b><small>{threadTopicNames[open.topic] || open.topic} · {open.contactEmail || 'почта не указана'}</small></div>
+        <span className={'support-status support-status-' + open.status}>{open.status}</span>
+      </div>
+      <div className="support-messages">
+        {open.messages.map((item) => <article key={item.id} className={'support-message support-' + (item.from === 'admin' ? 'player' : item.from === 'system' ? 'system' : 'admin')}>
+          <span>{item.from === 'player' ? open.playerName : item.from === 'admin' ? 'Вы' : 'Система'}</span>
+          <p>{item.text}</p>
+        </article>)}
+      </div>
+      <form className="support-composer" onSubmit={(event) => { event.preventDefault(); send(); }}>
+        <textarea value={reply} onChange={(event) => setReply(event.target.value)} rows={2} placeholder="Ответить игроку..." />
+        <button className="button primary" type="submit" disabled={busy}>Ответить</button>
+      </form>
+      <div className="admin-reward-picker">
+        <b>Награды за помощь</b>
+        <div className="admin-reward-list">{rewardPresets.map((preset) => {
+          const active = picked.some((item) => item.productId === preset.productId && item.type === preset.type && item.months === preset.months);
+          return <button key={preset.label} type="button" className={active ? 'selected' : ''} onClick={() => togglePreset(preset)}>{preset.label}</button>;
+        })}</div>
+        <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Комментарий к решению (необязательно)" />
+        <small className="feedback-note">Награда уходит только на аккаунт с почтой: у гостя она пропадёт вместе с кэшем браузера.</small>
+        <div className="admin-thread-actions">
+          <button className="button primary" type="button" disabled={busy || !picked.length} onClick={accept}>Принять и наградить</button>
+          <button className="button secondary" type="button" disabled={busy} onClick={reject}>Отклонить</button>
+        </div>
+      </div>
+    </div> : <div className="support-threads">
+      {threads.length === 0 ? <p className="feedback-note">Обращений пока нет.</p> : threads.map((thread) => <button key={thread.id} type="button" className="support-thread-row" onClick={() => setOpenId(thread.id)}>
+        <span><b>{thread.playerName} · {threadTopicNames[thread.topic] || thread.topic}</b><small>{thread.lastText.slice(0, 70)}</small></span>
+        <strong className={'support-status support-status-' + thread.status}>{thread.unread > 0 ? thread.unread + ' новых' : thread.status}</strong>
+      </button>)}
+    </div>}
+  </section>;
 }

@@ -9,6 +9,9 @@ import {
   publicProfile,
 } from '../profileStore.js';
 import { analyticsSnapshot, track } from '../analyticsStore.js';
+import { addMessage, addThreadReward, getThread, listThreads, markRead, setThreadStatus } from '../threadStore.js';
+import { getOrCreateProfile } from '../profileStore.js';
+import { persistThreads } from '../lib/persist.js';
 import { listSpyBundles, listSpyDictionaries } from '../games/spy/index.js';
 import { listThemePasses } from '../games/thematicPasses.js';
 import { persistProfiles } from '../lib/persist.js';
@@ -180,5 +183,92 @@ adminRouter.delete('/profiles/:playerId/purchases/:purchaseId', requireAdmin, (r
     response.json({ ok: true, profile: adminProfileSummary(profile), overview: adminOverview() });
   } catch (error) {
     response.status(400).json({ ok: false, error: error.message || 'Remove purchase failed' });
+  }
+});
+
+// --- Диалоги -----------------------------------------------------------------
+function adminThreadSummary(thread) {
+  const last = thread.messages[thread.messages.length - 1];
+  return {
+    id: thread.id,
+    playerId: thread.playerId,
+    playerName: thread.playerName,
+    contactEmail: thread.contactEmail,
+    topic: thread.topic,
+    taskId: thread.taskId,
+    status: thread.status,
+    rewards: thread.rewards,
+    messages: thread.messages,
+    unread: thread.unreadForAdmin,
+    lastText: last?.text || '',
+    lastFrom: last?.from || '',
+    updatedAt: thread.updatedAt,
+    createdAt: thread.createdAt,
+  };
+}
+
+adminRouter.get('/threads', requireAdmin, (_request, response) => {
+  response.json({ ok: true, threads: listThreads().map(adminThreadSummary) });
+});
+
+adminRouter.post('/threads/:id/messages', requireAdmin, (request, response) => {
+  try {
+    const thread = getThread(request.params.id);
+    if (!thread) throw new Error('Обращение не найдено');
+    addMessage(thread, 'admin', request.body?.text);
+    markRead(thread, 'admin');
+    persistThreads();
+    response.json({ ok: true, thread: adminThreadSummary(thread) });
+  } catch (error) {
+    response.status(400).json({ ok: false, error: error.message || 'Не удалось ответить' });
+  }
+});
+
+// Приём заявки: одна кнопка выдаёт сразу несколько наград и пишет об этом
+// в тот же диалог, чтобы игрок увидел результат там же, где переписывался.
+adminRouter.post('/threads/:id/accept', requireAdmin, (request, response) => {
+  try {
+    const thread = getThread(request.params.id);
+    if (!thread) throw new Error('Обращение не найдено');
+    const rewards = Array.isArray(request.body?.rewards) ? request.body.rewards : [];
+    if (!rewards.length) throw new Error('Выберите хотя бы одну награду');
+    // Гостевой профиль живёт в localStorage игрока: очистит кэш — потеряет и
+    // награду, и переписку. Награждаем только привязанный аккаунт.
+    if (getOrCreateProfile(thread.playerId).accountType !== 'email') {
+      throw new Error('У игрока гостевой профиль — попросите войти по почте, иначе награда потеряется');
+    }
+    const granted = [];
+    for (const reward of rewards) {
+      const { purchase } = adminGrantAccess(thread.playerId, reward);
+      const months = Number(reward.months) || 0;
+      const title = months > 1 ? `${purchase.title} (${months} мес.)` : purchase.title;
+      addThreadReward(thread, { type: purchase.type, productId: purchase.productId, title, months });
+      track('admin_grant', { type: purchase.type, productId: purchase.productId, playerId: thread.playerId });
+      granted.push(title || purchase.productId);
+    }
+    setThreadStatus(thread, 'accepted');
+    const note = String(request.body?.note || '').trim();
+    addMessage(thread, 'system', `Заявка принята. Начислено: ${granted.join(', ')}.${note ? ` ${note}` : ''}`);
+    markRead(thread, 'admin');
+    persistProfiles();
+    persistThreads();
+    response.json({ ok: true, thread: adminThreadSummary(thread), overview: adminOverview() });
+  } catch (error) {
+    response.status(400).json({ ok: false, error: error.message || 'Не удалось принять заявку' });
+  }
+});
+
+adminRouter.post('/threads/:id/reject', requireAdmin, (request, response) => {
+  try {
+    const thread = getThread(request.params.id);
+    if (!thread) throw new Error('Обращение не найдено');
+    const reason = String(request.body?.reason || '').trim();
+    setThreadStatus(thread, 'rejected');
+    addMessage(thread, 'system', reason ? `Заявка отклонена: ${reason}` : 'Заявка отклонена.');
+    markRead(thread, 'admin');
+    persistThreads();
+    response.json({ ok: true, thread: adminThreadSummary(thread) });
+  } catch (error) {
+    response.status(400).json({ ok: false, error: error.message || 'Не удалось отклонить заявку' });
   }
 });

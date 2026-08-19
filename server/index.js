@@ -69,6 +69,8 @@ import {
   updateProfileName,
 } from './profileStore.js';
 import { connectProfilePersistence, loadProfileSnapshot, scheduleProfileSnapshot } from './profilePersistence.js';
+import { connectThreadPersistence, loadThreadSnapshot } from './threadPersistence.js';
+import { restoreThreads } from './threadStore.js';
 import { connectAnalyticsPersistence, restoreAnalyticsSnapshot, track } from './analyticsStore.js';
 import { aliasDefinition, aliasDictionaryPreview, createAliasRound, createAliasTeams, nextAliasWord } from './games/alias/index.js';
 import {
@@ -1107,6 +1109,8 @@ await connectRoomPersistence();
 restoreRooms(await loadRoomSnapshot());
 await connectProfilePersistence();
 restoreProfiles(await loadProfileSnapshot());
+await connectThreadPersistence();
+restoreThreads(await loadThreadSnapshot());
 await connectAnalyticsPersistence();
 await restoreAnalyticsSnapshot();
 server.listen(port, '0.0.0.0', () => console.log(`GameHubParty server: http://localhost:${port}`));
