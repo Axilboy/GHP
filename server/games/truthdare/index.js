@@ -5,9 +5,9 @@ export const truthDareDefinition = {
   minPlayers: 2,
   maxPlayers: 20,
   playModes: ['party'],
-  defaultSettings: { deck: 'party', targetScore: 10 },
+  defaultSettings: { decks: ['party'], targetScore: 10 },
   settingsSchema: {
-    deck: { type: 'enum', values: ['family', 'party', 'drinks', 'couples', 'adult_couples', 'adult_party', 'fandom', 'harry_potter', 'lotr', 'retro_movies', 'video_games', 'bold'] },
+    decks: { type: 'dictionary-list' },
     targetScore: { type: 'number', min: 5, max: 30 },
   },
   plannedFeatures: ['Правда', 'Действие', 'Случайный игрок', 'Счёт выполненных заданий'],
@@ -310,9 +310,12 @@ const RECENT_MEMORY = 14;
 
 export function normalizeTruthDareSettings(settings = {}) {
   const target = Number(settings.targetScore);
-  const deck = truthDareDefinition.settingsSchema.deck.values.includes(settings.deck) ? settings.deck : truthDareDefinition.defaultSettings.deck;
+  // settings.deck — старое поле одной колоды: комнаты и сохранённые состояния,
+  // созданные до мультивыбора, продолжают открываться.
+  const requested = Array.isArray(settings.decks) ? settings.decks : settings.deck ? [settings.deck] : [];
+  const decks = [...new Set(requested)].filter((id) => truthDareDecks.some((deck) => deck.id === id));
   return {
-    deck,
+    decks: decks.length ? decks : [...truthDareDefinition.defaultSettings.decks],
     targetScore: Math.min(30, Math.max(5, Number.isFinite(target) ? target : truthDareDefinition.defaultSettings.targetScore)),
   };
 }
@@ -321,13 +324,18 @@ function activePlayers(room) {
   return room.players.filter((player) => player.online);
 }
 
-export function truthDarePool(deckId, type) {
-  const deck = truthDareDecks.find((item) => item.id === deckId) || truthDareDecks[1];
-  const levels = new Set(deck.levels || [1, 2]);
-  return [
+// Пул складывается из всех выбранных колод: уровни объединяются, тематические
+// карточки идут следом, дубли между колодами схлопываются по тексту.
+export function truthDarePool(deckIds, type) {
+  const requested = Array.isArray(deckIds) ? deckIds : [deckIds];
+  const decks = requested.map((id) => truthDareDecks.find((item) => item.id === id)).filter(Boolean);
+  const selected = decks.length ? decks : [truthDareDecks[1]];
+  const levels = new Set(selected.flatMap((deck) => deck.levels || [1, 2]));
+  const prompts = [
     ...UNIVERSAL[type].filter((prompt) => levels.has(prompt.level)),
-    ...(DECK_PROMPTS[deckId]?.[type] || []),
+    ...selected.flatMap((deck) => DECK_PROMPTS[deck.id]?.[type] || []),
   ];
+  return [...new Map(prompts.map((prompt) => [prompt.text, prompt])).values()];
 }
 
 // Подставляет живых игроков вместо {игрок} и {сосед}. Имя выбирается один раз
@@ -345,7 +353,7 @@ export function fillPromptNames(text, room, activePlayerId, random = Math.random
 }
 
 function pickPrompt(room, type, random) {
-  const pool = truthDarePool(room.settings.deck, type);
+  const pool = truthDarePool(room.settings.decks, type);
   const recent = new Set(room.truthDareUsed || []);
   const fresh = pool.filter((prompt) => !recent.has(prompt.text));
   const source = fresh.length ? fresh : pool;

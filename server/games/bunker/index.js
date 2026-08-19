@@ -4,12 +4,12 @@ export const bunkerDefinition = {
   status: 'mvp',
   minPlayers: 4,
   maxPlayers: 16,
-  defaultSettings: { roundSeconds: 300, votingSeconds: 45, revealMode: 'private_table', contentPackId: 'classic' },
+  defaultSettings: { roundSeconds: 300, votingSeconds: 45, revealMode: 'private_table', contentPackIds: ['classic'] },
   settingsSchema: {
     roundSeconds: { type: 'number', values: [180, 300, 420] },
     votingSeconds: { type: 'number', values: [30, 45, 60] },
     revealMode: { type: 'mode', values: ['private_table', 'public_turns'] },
-    contentPackId: { type: 'content-pack', values: ['classic', 'party', 'drinks', 'couples', 'adult_couples', 'party18', 'corporate', 'space', 'mystic', 'wasteland', 'fandom', 'harry_potter', 'lotr', 'retro_movies', 'video_games'] },
+    contentPackIds: { type: 'content-pack-list' },
   },
 };
 
@@ -327,8 +327,21 @@ function pick(list, random) {
   return list[Math.floor(random() * list.length)];
 }
 
-function contentPack(id) {
-  return bunkerPools[id] || bunkerPools.classic;
+function contentPack(ids) {
+  const requested = (Array.isArray(ids) ? ids : [ids]).map((id) => bunkerPools[id]).filter(Boolean);
+  const packs = requested.length ? requested : [bunkerPools.classic];
+  if (packs.length === 1) return packs[0];
+  const merged = {};
+  for (const pack of packs) {
+    for (const [field, values] of Object.entries(pack)) {
+      if (Array.isArray(values)) merged[field] = [...(merged[field] || []), ...values];
+      else merged[field] ??= values;
+    }
+  }
+  for (const field of Object.keys(merged)) {
+    if (Array.isArray(merged[field])) merged[field] = [...new Set(merged[field])];
+  }
+  return merged;
 }
 
 function emptyReveals(playerIds) {
@@ -339,19 +352,24 @@ export function normalizeBunkerSettings(settings = {}) {
   const seconds = Number(settings.roundSeconds);
   const votingSeconds = Number(settings.votingSeconds);
   const revealMode = bunkerDefinition.settingsSchema.revealMode.values.includes(settings.revealMode) ? settings.revealMode : bunkerDefinition.defaultSettings.revealMode;
-  const contentPackId = bunkerDefinition.settingsSchema.contentPackId.values.includes(settings.contentPackId) ? settings.contentPackId : bunkerDefinition.defaultSettings.contentPackId;
+  // contentPackId — старое поле одного сценария: комнаты, созданные до
+  // мультивыбора, продолжают открываться.
+  const requestedPacks = Array.isArray(settings.contentPackIds)
+    ? settings.contentPackIds
+    : settings.contentPackId ? [settings.contentPackId] : [];
+  const contentPackIds = [...new Set(requestedPacks)].filter((id) => bunkerPools[id]);
   return {
     roundSeconds: bunkerDefinition.settingsSchema.roundSeconds.values.includes(seconds) ? seconds : bunkerDefinition.defaultSettings.roundSeconds,
     votingSeconds: bunkerDefinition.settingsSchema.votingSeconds.values.includes(votingSeconds) ? votingSeconds : bunkerDefinition.defaultSettings.votingSeconds,
     revealMode,
-    contentPackId,
+    contentPackIds: contentPackIds.length ? contentPackIds : [...bunkerDefinition.defaultSettings.contentPackIds],
   };
 }
 
 export function createBunkerRound(room, random = Math.random) {
   const activePlayers = room.players.filter((player) => player.online);
   const playerIds = activePlayers.map((player) => player.id);
-  const pool = contentPack(room.settings.contentPackId);
+  const pool = contentPack(room.settings.contentPackIds);
   const cards = {};
   for (const player of activePlayers) {
     cards[player.id] = {
@@ -373,7 +391,7 @@ export function createBunkerRound(room, random = Math.random) {
     shelter: pick(pool.shelters, random),
     scenarioGoal: pick(pool.scenarioGoals, random),
     shelterCapacity: Math.max(2, Math.floor(activePlayers.length / 2)),
-    contentPackId: room.settings.contentPackId,
+    contentPackIds: room.settings.contentPackIds,
     cards,
     acceptedRuleIds: [],
     revealOrder: playerIds,

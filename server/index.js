@@ -588,18 +588,22 @@ io.on('connection', (socket) => {
           .map((dictionary) => dictionary.id));
       if (settings.dictionaryIds.some((id) => !allowed.has(id))) throw new Error('Этот набор Alias доступен в Alias Pass, WeekendPass, тематическом пропуске или PRO');
     }
-    if (room.gameId === 'bunker' && settings.contentPackId) {
+    if (room.gameId === 'bunker' && settings.contentPackIds) {
       const profile = getOrCreateProfile(socket.data.playerId);
       const hasPartyPass = profile.partyPasses?.some((pass) => pass.activeUntil > Date.now());
       const hasBunkerAccess = hasTimedGameAccess(profile, 'bunker') || hasPartyPass;
-      const pack = bunkerContentPacks.find((item) => item.id === settings.contentPackId);
-      if (pack && !pack.free && pack.tier !== 'free' && !hasBunkerAccess && !hasAnyThemePass(profile, getContentThemeIds('bunker', pack.id))) throw new Error('Этот сценарий Бункера доступен в Bunker Pass, WeekendPass, тематическом пропуске или PRO');
+      for (const packId of settings.contentPackIds) {
+        const pack = bunkerContentPacks.find((item) => item.id === packId);
+        if (pack && !pack.free && pack.tier !== 'free' && !hasBunkerAccess && !hasAnyThemePass(profile, getContentThemeIds('bunker', pack.id))) throw new Error('Этот сценарий Бункера доступен в Bunker Pass, WeekendPass, тематическом пропуске или PRO');
+      }
     }
-    if (room.gameId === 'truthdare' && settings.deck) {
+    if (room.gameId === 'truthdare' && settings.decks) {
       const profile = getOrCreateProfile(socket.data.playerId);
-      const deck = truthDareDecks.find((item) => item.id === settings.deck);
-      const hasDeckAccess = hasTimedGameAccess(profile, 'truthdare') || hasAnyThemePass(profile, getContentThemeIds('truthdare', deck?.id));
-      if (deck && !deck.free && deck.tier !== 'free' && !hasDeckAccess) throw new Error('Этот набор доступен в тематическом пропуске или PRO');
+      for (const deckId of settings.decks) {
+        const deck = truthDareDecks.find((item) => item.id === deckId);
+        const hasDeckAccess = hasTimedGameAccess(profile, 'truthdare') || hasAnyThemePass(profile, getContentThemeIds('truthdare', deck?.id));
+        if (deck && !deck.free && deck.tier !== 'free' && !hasDeckAccess) throw new Error('Этот набор доступен в тематическом пропуске или PRO');
+      }
     }
     updateRoomSettings(room, settings);
     emitRoom(room);

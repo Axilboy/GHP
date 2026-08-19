@@ -11,6 +11,7 @@ import {
   truthDareDecks,
   truthDarePool,
   truthDareJury,
+  normalizeTruthDareSettings,
   voteTruthDare,
 } from './index.js';
 
@@ -19,7 +20,7 @@ function makeRoom(playerCount = 3, settings = {}) {
     gameId: 'truthdare',
     state: 'playing',
     players: Array.from({ length: playerCount }, (_, index) => ({ id: `p${index + 1}`, name: `Игрок${index + 1}`, online: true })),
-    settings: { deck: 'party', targetScore: 10, ...settings },
+    settings: { decks: ['party'], targetScore: 10, ...settings },
     scores: {},
     matchHistory: [],
     round: null,
@@ -59,7 +60,7 @@ test('player placeholders are replaced with real names at the table', () => {
 
 test('a card never carries an unfilled placeholder into the room', () => {
   for (const deck of truthDareDecks) {
-    const room = makeRoom(4, { deck: deck.id });
+    const room = makeRoom(4, { decks: [deck.id] });
     for (let turn = 0; turn < 30; turn += 1) {
       chooseTruthDarePrompt(room, turn % 2 ? 'truth' : 'dare');
       assert.doesNotMatch(room.round.promptText, /\{[^}]+\}/, `${deck.id}: осталась подстановка`);
@@ -127,7 +128,7 @@ test('every deck holds enough cards to survive a real party', () => {
 });
 
 test('recent cards do not repeat while fresh ones are left', () => {
-  const room = makeRoom(4, { deck: 'party', targetScore: 99 });
+  const room = makeRoom(4, { decks: ['party'], targetScore: 99 });
   const seen = [];
   for (let turn = 0; turn < 10; turn += 1) {
     chooseTruthDarePrompt(room, 'truth');
@@ -147,4 +148,37 @@ test('match ends when the target score is reached', () => {
   assert.equal(room.state, 'match_result');
   assert.equal(room.round.result.winnerId, 'p1');
   assert.equal(room.round.result.score, 2);
+});
+
+test('several decks merge into one pool without duplicates', () => {
+  for (const type of ['truth', 'dare']) {
+    const family = truthDarePool(['family'], type);
+    const bold = truthDarePool(['bold'], type);
+    const both = truthDarePool(['family', 'bold'], type);
+    assert.ok(both.length > family.length, 'вторая колода должна добавлять карточки');
+    assert.ok(both.length > bold.length);
+    assert.equal(new Set(both.map((prompt) => prompt.text)).size, both.length, 'дубли между колодами не схлопнулись');
+    // Уровни обеих колод доступны одновременно.
+    const levels = new Set(both.map((prompt) => prompt.level));
+    assert.ok(levels.has(1) && levels.has(3));
+  }
+});
+
+test('a room can play on several decks at once', () => {
+  const room = makeRoom(3, { decks: ['family', 'bold'], targetScore: 99 });
+  const seen = new Set();
+  for (let turn = 0; turn < 20; turn += 1) {
+    chooseTruthDarePrompt(room, 'dare');
+    seen.add(room.round.promptLevel);
+    finishTruthDareTurn(room, 'rejected');
+  }
+  assert.ok(seen.size >= 2, `ожидались карточки разных уровней, получено: ${[...seen].join(',')}`);
+});
+
+test('legacy single-deck rooms keep working', () => {
+  assert.deepEqual(normalizeTruthDareSettings({ deck: 'bold' }).decks, ['bold']);
+  assert.deepEqual(normalizeTruthDareSettings({ decks: ['family', 'bold'] }).decks, ['family', 'bold']);
+  assert.deepEqual(normalizeTruthDareSettings({ decks: ['nope'] }).decks, ['party']);
+  assert.deepEqual(normalizeTruthDareSettings({ decks: ['party', 'party'] }).decks, ['party']);
+  assert.deepEqual(normalizeTruthDareSettings({}).decks, ['party']);
 });

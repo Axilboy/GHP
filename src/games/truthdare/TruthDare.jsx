@@ -61,7 +61,7 @@ const levelNames = { 1: 'Разогрев', 2: 'Вечеринка', 3: 'Сме�
 
 export function TruthDareGame({ room, me, action, leave, navigate, error }) {
   const round = room.round || {};
-  const deckName = deckNames[room.settings.deck] || 'Вечеринка';
+  const deckName = deckLabel(room.settings.decks);
   const isActive = round.activePlayerId === me?.id;
   const activeName = round.activePlayerName || 'Игрок';
   const shell = (children) => <GameShell gameId="truthdare" room={room} navigate={navigate} right={<span className="badge">{deckName}</span>}>{children}</GameShell>;
@@ -150,12 +150,24 @@ export function TruthDareHostSettings({ room, catalog = {}, profile, update, cha
     { id: 'party', name: 'Вечеринка', free: true },
     { id: 'bold', name: 'Смелый', tier: 'premium' },
   ];
+  const selectedDecks = room.settings.decks || [];
+  const toggleDeck = (id) => {
+    const next = selectedDecks.includes(id) ? selectedDecks.filter((item) => item !== id) : [...selectedDecks, id];
+    if (next.length) update({ decks: next });
+  };
   return <section className="section settings alias-host-panel truthdare-host-panel">
     <h2>Правда или действие</h2>
     <GameSwitcher gameId={room.gameId} changeGame={changeGame} />
     <details className="settings-group" open>
-      <summary><span>Настройки карточек</span><small>{deckNames[room.settings.deck] || 'Вечеринка'} · до {room.settings.targetScore}</small></summary>
-      <Setting label="Колода"><select value={room.settings.deck} onChange={(event) => update({ deck: event.target.value })}>{decks.map((deck) => { const locked = !hasThemedContentAccess(profile, 'truthdare', deck); return <option key={deck.id} value={deck.id} disabled={locked}>{deck.name || deckNames[deck.id]} · {locked ? 'пропуск или PRO' : deck.free || deck.tier === 'free' ? 'включена' : 'открыта'}</option>; })}</select></Setting>
+      <summary><span>Настройки карточек</span><small>{deckLabel(room.settings.decks)} · до {room.settings.targetScore}</small></summary>
+      <div className="dictionary-checklist">{decks.map((deck) => {
+        const locked = !hasThemedContentAccess(profile, 'truthdare', deck);
+        const checked = selectedDecks.includes(deck.id);
+        return <label key={deck.id} className={locked ? 'locked' : ''}>
+          <input type="checkbox" checked={checked} disabled={locked} onChange={() => toggleDeck(deck.id)} />
+          <span><b>{deck.name || deckNames[deck.id]}</b><small>{deck.ageRating ? `${deck.ageRating} · ` : ''}{locked ? 'пропуск или PRO' : 'доступна'}</small></span>
+        </label>;
+      })}</div>
       <Setting label="Цель"><Counter value={room.settings.targetScore} min={5} max={30} change={(targetScore) => update({ targetScore })} /></Setting>
     </details>
     <p className="settings-note">Очко даётся только за карточку, которую засчитала компания. У каждого есть два отказа на игру. Тематический пропуск открывает свою колоду, а PRO открывает все колоды разом.</p>
@@ -167,7 +179,7 @@ export function TruthDareLobbySummary({ room, themeSummary }) {
   return <section className="lobby-game-summary alias-summary truthdare-summary">
     <span>Выбрана игра</span>
     <h2>Правда или действие</h2>
-    <p>{deckNames[room.settings.deck] || 'Вечеринка'} · до {room.settings.targetScore} выполненных карточек</p>
+    <p>{deckLabel(room.settings.decks)} · до {room.settings.targetScore} выполненных карточек</p>
     <small>Ход идёт по кругу, игрок сам выбирает правду или действие, а компания решает, засчитать ли карточку.</small>
     {themeSummary}
   </section>;
@@ -180,6 +192,14 @@ export function TruthDareScoreLine({ room }) {
 
 export function TruthDareRulesModal({ close }) {
   return <div className="backdrop" onMouseDown={close}><section className="modal rules-modal" onMouseDown={(event) => event.stopPropagation()}><div className="modal-title"><div><span className="eyebrow">Перед первой карточкой</span><h2>Как играть</h2></div><button className="close" onClick={close}>×</button></div><ol><li><b>Игрок выбирает сам</b><span>Телефон передаёт ход по кругу, а правду или действие выбирает сам игрок — карточку он видит только после выбора.</span></li><li><b>Компания решает, засчитать ли</b><span>После ответа остальные голосуют «Засчитать» или «Не засчитывать». Очко даётся только за принятую карточку.</span></li><li><b>Отказ стоит жетона</b><span>На игру даётся два отказа. Когда они кончились, карточку придётся выполнять.</span></li></ol><p className="guest-name-note">Карточки становятся смелее вместе с выбранной колодой. Держите темп быстрым: короткие ответы, много смеха, без давления.</p><button className="button primary full" onClick={close}>Понятно, играем</button></section></div>;
+}
+
+// Одна колода показывается по имени, несколько — счётчиком, иначе подпись
+// в шапке и лобби расползается на несколько строк.
+function deckLabel(deckIds = []) {
+  const ids = deckIds.length ? deckIds : ['party'];
+  if (ids.length === 1) return deckNames[ids[0]] || 'Вечеринка';
+  return `${ids.length} ${ids.length < 5 ? 'колоды' : 'колод'}`;
 }
 
 function truthDareLeader(room) {

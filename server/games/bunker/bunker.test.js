@@ -52,15 +52,41 @@ test('bunker settings reject unsupported durations', () => {
     roundSeconds: 300,
     votingSeconds: 45,
     revealMode: 'private_table',
-    contentPackId: 'classic',
+    contentPackIds: ['classic'],
   });
-  assert.deepEqual(normalizeBunkerSettings({ roundSeconds: 180, votingSeconds: 60, revealMode: 'public_turns', contentPackId: 'space' }), {
+  assert.deepEqual(normalizeBunkerSettings({ roundSeconds: 180, votingSeconds: 60, revealMode: 'public_turns', contentPackIds: ['space'] }), {
     roundSeconds: 180,
     votingSeconds: 60,
     revealMode: 'public_turns',
-    contentPackId: 'space',
+    contentPackIds: ['space'],
   });
-  assert.deepEqual(normalizeBunkerSettings({ contentPackId: 'harry_potter' }).contentPackId, 'harry_potter');
+  // Старое одиночное поле у комнат, созданных до мультивыбора.
+  assert.deepEqual(normalizeBunkerSettings({ contentPackId: 'harry_potter' }).contentPackIds, ['harry_potter']);
+  assert.deepEqual(normalizeBunkerSettings({ contentPackIds: ['space', 'mystic'] }).contentPackIds, ['space', 'mystic']);
+  assert.deepEqual(normalizeBunkerSettings({ contentPackIds: ['nope'] }).contentPackIds, ['classic']);
+});
+
+test('several bunker packs deal cards from all of them', () => {
+  const room = {
+    players: Array.from({ length: 6 }, (_, i) => ({ id: `p${i + 1}`, name: `И${i + 1}`, online: true })),
+    settings: normalizeBunkerSettings({ contentPackIds: ['space', 'harry_potter'] }),
+  };
+  const single = {
+    players: room.players,
+    settings: normalizeBunkerSettings({ contentPackIds: ['space'] }),
+  };
+  const professions = new Set();
+  for (let run = 0; run < 60; run += 1) {
+    const round = createBunkerRound(room);
+    Object.values(round.cards).forEach((card) => professions.add(card.profession));
+  }
+  const soloProfessions = new Set();
+  for (let run = 0; run < 60; run += 1) {
+    const round = createBunkerRound(single);
+    Object.values(round.cards).forEach((card) => soloProfessions.add(card.profession));
+  }
+  assert.ok(professions.size > soloProfessions.size, 'две колоды должны давать больше вариантов, чем одна');
+  assert.deepEqual(createBunkerRound(room).contentPackIds, ['space', 'harry_potter']);
 });
 
 test('bunker catalog keeps classic free and premium expansion packs', () => {
